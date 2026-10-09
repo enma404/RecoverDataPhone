@@ -258,7 +258,7 @@ public final class ServerConfig {
         }
 
         // تحقق بسيط: يجب أن يحتوي على نقطتين (host:port)
-        // مثال: ws://192.168.1.2:8765
+        // مثال: ws://192.1**.0.0:8765
         String afterPrefix = u.startsWith(PREFIX_WSS)
                 ? u.substring(PREFIX_WSS.length())
                 : u.substring(PREFIX_WS.length());
