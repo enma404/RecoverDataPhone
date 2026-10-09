@@ -4,7 +4,7 @@
 <div align="center">
 
 <!-- ضع شعارك هنا (استبدل logo.png) -->
-<img src="docs/assets/logo.png" alt="RecoverDataPhone Logo" width="160" height="160" />
+<img src="docs/assets/icon.jpg" alt="RecoverDataPhone Logo" width="160" height="160" />
 
 # RecoverDataPhone
 
