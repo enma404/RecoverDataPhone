@@ -10,7 +10,6 @@
 
 ### استرجاع البيانات من الهواتف ذات الشاشات المكسورة
 
-[![Build APK](https://github.com/YOUR_USERNAME/RecoverDataPhone/actions/workflows/build-apk.yml/badge.svg)](https://github.com/enma404/RecoverDataPhone/actions/workflows/build-apk.yml)
 [![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/YOUR_USERNAME/RecoverDataPhone/releases)
 [![License](https://img.shields.io/badge/license-Proprietary-red.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Android%2024%2B-green.svg)](https://developer.android.com)
