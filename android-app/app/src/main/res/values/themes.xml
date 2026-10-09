@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    themes.xml
+    ============================================================
+    ثيمات التطبيق.
+    
+    نستخدم Theme.MaterialComponents.DayNight لأنه:
+      - يدعم الوضع الليلي تلقائياً
+      - متوافق مع Material Design 3
+      - يدعم كل الأجهزة من API 24
+    ============================================================
+-->
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- ============================================================ -->
+    <!-- 1. الثيم الأساسي (المشار إليه في AndroidManifest)              -->
+    <!-- ============================================================ -->
+    <style name="Theme.RecoverDataPhone" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+
+        <!-- ===== الألوان الأساسية ===== -->
+        <item name="colorPrimary">@color/brand_primary</item>
+        <item name="colorPrimaryVariant">@color/brand_primary_dark</item>
+        <item name="colorOnPrimary">@color/white</item>
+
+        <item name="colorSecondary">@color/brand_secondary</item>
+        <item name="colorSecondaryVariant">@color/brand_secondary_dark</item>
+        <item name="colorOnSecondary">@color/white</item>
+
+        <!-- ===== شريط الحالة ===== -->
+        <item name="android:statusBarColor">@color/brand_primary_dark</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
+
+        <item name="android:navigationBarColor">@color/brand_primary_dark</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">false</item>
+
+        <!-- ===== الخلفية ===== -->
+        <item name="android:windowBackground">?android:attr/colorBackground</item>
+
+        <!-- ===== النصوص ===== -->
+        <item name="android:textColorPrimary">?android:attr/textColorPrimary</item>
+        <item name="android:textColorSecondary">?android:attr/textColorSecondary</item>
+
+        <!-- ===== الأزرار ===== -->
+        <item name="materialButtonStyle">@style/Widget.RDP.Button</item>
+
+        <!-- ===== الحوارات ===== -->
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.RDP.AlertDialog</item>
+
+        <!-- ===== حقول الإدخال ===== -->
+        <item name="textInputStyle">@style/Widget.RDP.TextInput</item>
+
+        <!-- ===== البطاقات ===== -->
+        <item name="materialCardViewStyle">@style/Widget.RDP.Card</item>
+    </style>
+
+    <!-- ============================================================ -->
+    <!-- 2. ثيم شاشة البداية (Splash) - اختياري                        -->
+    <!-- ============================================================ -->
+    <style name="Theme.RecoverDataPhone.Splash" parent="Theme.RecoverDataPhone">
+        <item name="android:windowBackground">@color/brand_primary</item>
+        <item name="android:statusBarColor">@color/brand_primary</item>
+    </style>
+
+    <!-- ============================================================ -->
+    <!-- 3. ثيم الحوارات                                                -->
+    <!-- ============================================================ -->
+    <style name="ThemeOverlay.RDP.AlertDialog"
+           parent="ThemeOverlay.MaterialComponents.MaterialAlertDialog">
+        <item name="colorPrimary">@color/brand_primary</item>
+        <item name="android:background">?android:attr/colorBackground</item>
+    </style>
+
+    <!-- ============================================================ -->
+    <!-- 4. نمط الأزرار                                                 -->
+    <!-- ============================================================ -->
+    <style name="Widget.RDP.Button" parent="Widget.MaterialComponents.Button">
+        <item name="android:textAllCaps">false</item>
+        <item name="android:paddingStart">24dp</item>
+        <item name="android:paddingEnd">24dp</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="cornerRadius">8dp</item>
+        <item name="android:textSize">15sp</item>
+    </style>
+
+    <style name="Widget.RDP.Button.Outlined" parent="Widget.MaterialComponents.Button.OutlinedButton">
+        <item name="android:textAllCaps">false</item>
+        <item name="android:paddingStart">20dp</item>
+        <item name="android:paddingEnd">20dp</item>
+        <item name="android:minHeight">44dp</item>
+        <item name="cornerRadius">8dp</item>
+    </style>
+
+    <style name="Widget.RDP.Button.Text" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <!-- ============================================================ -->
+    <!-- 5. نمط حقول الإدخال                                            -->
+    <!-- ============================================================ -->
+    <style name="Widget.RDP.TextInput" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <item name="boxCornerRadiusTopStart">8dp</item>
+        <item name="boxCornerRadiusTopEnd">8dp</item>
+        <item name="boxCornerRadiusBottomStart">8dp</item>
+        <item name="boxCornerRadiusBottomEnd">8dp</item>
+        <item name="boxStrokeColor">@color/brand_primary</item>
+        <item name="hintTextColor">@color/brand_primary</item>
+    </style>
+
+    <!-- ============================================================ -->
+    <!-- 6. نمط البطاقات                                                -->
+    <!-- ============================================================ -->
+    <style name="Widget.RDP.Card" parent="Widget.MaterialComponents.CardView">
+        <item name="cardCornerRadius">12dp</item>
+        <item name="cardElevation">2dp</item>
+        <item name="cardBackgroundColor">?android:attr/colorBackground</item>
+        <item name="android:layout_marginStart">16dp</item>
+        <item name="android:layout_marginEnd">16dp</item>
+        <item name="android:layout_marginTop">8dp</item>
+        <item name="android:layout_marginBottom">8dp</item>
+    </style>
+
+    <!-- ============================================================ -->
+    <!-- 7. أنماط النصوص                                                -->
+    <!-- ============================================================ -->
+    <style name="TextAppearance.RDP.Headline" parent="TextAppearance.MaterialComponents.Headline6">
+        <item name="android:textSize">20sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">?android:attr/textColorPrimary</item>
+    </style>
+
+    <style name="TextAppearance.RDP.Subtitle" parent="TextAppearance.MaterialComponents.Subtitle1">
+        <item name="android:textSize">16sp</item>
+        <item name="android:textColor">?android:attr/textColorSecondary</item>
+    </style>
+
+    <style name="TextAppearance.RDP.Body" parent="TextAppearance.MaterialComponents.Body2">
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">?android:attr/textColorPrimary</item>
+    </style>
+
+    <style name="TextAppearance.RDP.Caption" parent="TextAppearance.MaterialComponents.Caption">
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">?android:attr/textColorSecondary</item>
+    </style>
+
+    <!-- ============================================================ -->
+    <!-- 8. أنماط متخصصة                                                -->
+    <!-- ============================================================ -->
+    
+    <!-- عنوان قسم الصلاحيات -->
+    <style name="TextAppearance.RDP.PermissionTitle">
+        <item name="android:textSize">16sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">?android:attr/textColorPrimary</item>
+    </style>
+
+    <!-- وصف الصلاحية -->
+    <style name="TextAppearance.RDP.PermissionDesc">
+        <item name="android:textSize">13sp</item>
+        <item name="android:textColor">?android:attr/textColorSecondary</item>
+    </style>
+
+    <!-- حالة الصلاحية -->
+    <style name="TextAppearance.RDP.PermissionStatus">
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <!-- ============================================================ -->
+    <!-- 9. ثيم Surface (للـ MaterialCardView)                         -->
+    <!-- ============================================================ -->
+    <style name="ThemeOverlay.RDP.Surface" parent="">
+        <item name="colorSurface">?android:attr/colorBackground</item>
+        <item name="colorOnSurface">?android:attr/textColorPrimary</item>
+    </style>
+
+</resources>

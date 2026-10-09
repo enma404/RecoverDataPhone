@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    file_paths.xml
+    ============================================================
+    تعريف مسارات FileProvider.
+
+    الدور:
+      يسمح لتطبيقنا بمشاركة ملفاته مع تطبيقات/عمليات أخرى
+      بأمان عبر content:// URIs بدل file:// URIs.
+
+    لماذا؟
+      - Android 7+ يمنع file:// URIs (FileUriExposedException).
+      - FileProvider يحل هذه المشكلة بأمان.
+
+    الاستخدام في الكود:
+      Uri uri = FileProvider.getUriForFile(
+          context,
+          "com.recoverdata.phone.fileprovider",
+          file
+      );
+
+    ملاحظة: authority في Manifest هو:
+      ${applicationId}.fileprovider
+      → "com.recoverdata.phone.fileprovider"
+    ============================================================
+-->
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- ============================================================ -->
+    <!-- 1. مجلد الملفات الداخلي (Files)                                -->
+    <!-- المسار الفعلي: /data/data/com.recoverdata.phone/files/         -->
+    <!-- ============================================================ -->
+    <files-path
+        name="internal_files"
+        path="." />
+
+    <!-- ============================================================ -->
+    <!-- 2. مجلد Cache الداخلي                                          -->
+    <!-- المسار الفعلي: /data/data/com.recoverdata.phone/cache/         -->
+    <!-- ============================================================ -->
+    <cache-path
+        name="internal_cache"
+        path="." />
+
+    <!-- ============================================================ -->
+    <!-- 3. التخزين الخارجي - ملفات التطبيق                              -->
+    <!-- المسار: /sdcard/Android/data/com.recoverdata.phone/files/      -->
+    <!-- ============================================================ -->
+    <external-files-path
+        name="external_files"
+        path="." />
+
+    <!-- ============================================================ -->
+    <!-- 4. التخزين الخارجي - Cache التطبيق                              -->
+    <!-- المسار: /sdcard/Android/data/com.recoverdata.phone/cache/      -->
+    <!-- ============================================================ -->
+    <external-cache-path
+        name="external_cache"
+        path="." />
+
+    <!-- ============================================================ -->
+    <!-- 5. التخزين الخارجي العام (مشترك)                               -->
+    <!-- المسار: /sdcard/                                              -->
+    <!-- ⚠️ يتطلب صلاحيات في Android 11+                                -->
+    <!-- ============================================================ -->
+    <external-path
+        name="external_storage"
+        path="." />
+
+</paths>

@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    strings.xml
+    ============================================================
+    كل نصوص التطبيق.
+    
+    ملاحظة: لا تضع نصوصاً مباشرة في XML آخر.
+    استخدم @string/xxx دائماً.
+    ============================================================
+-->
+<resources>
+
+    <!-- ============================================================ -->
+    <!-- 1. معلومات التطبيق                                             -->
+    <!-- ============================================================ -->
+    <string name="app_name">RecoverDataPhone</string>
+    <string name="app_short_name">RDP</string>
+    <string name="app_description">استرجاع البيانات من هاتف بشاشة مكسورة</string>
+
+    <!-- ============================================================ -->
+    <!-- 2. Accessibility Service (إلزامي في Manifest)                  -->
+    <!-- ============================================================ -->
+    <string name="accessibility_service_label">RecoverDataPhone</string>
+    <string name="accessibility_service_summary">
+        خدمة لاسترجاع البيانات من هاتف بشاشة مكسورة
+    </string>
+    <string name="accessibility_service_description">
+        تسمح لك هذه الخدمة للسيرفر بالتحكم في الهاتف عن بُعد لإكمال
+        استرجاع البيانات من جهاز بشاشة مكسورة.
+        
+        تُستخدم فقط بعد موافقتك الصريحة، ويمكنك إيقافها في أي وقت
+        من الإعدادات → إمكانية الوصول.
+    </string>
+
+    <!-- ============================================================ -->
+    <!-- 3. الشاشة الرئيسية                                            -->
+    <!-- ============================================================ -->
+    <string name="main_title">RecoverDataPhone</string>
+    <string name="main_subtitle">استرجاع البيانات والتحكم عن بُعد</string>
+
+    <!-- حالة الصلاحيات -->
+    <string name="perm_status_title">📋 حالة الصلاحيات</string>
+    <string name="perm_status_ok">✅ كل الصلاحيات ممنوحة</string>
+    <string name="perm_status_missing">⚠️ صلاحيات ناقصة</string>
+
+    <!-- ============================================================ -->
+    <!-- 4. عناوين الصلاحيات الأربع                                     -->
+    <!-- ============================================================ -->
+    <string name="perm_media_title">🖼️ صلاحيات الوسائط</string>
+    <string name="perm_media_desc">قراءة الصور والفيديوهات</string>
+
+    <string name="perm_allfiles_title">📁 الوصول لجميع الملفات</string>
+    <string name="perm_allfiles_desc">للوصول إلى كل ملفات الجهاز</string>
+
+    <string name="perm_accessibility_title">♿ خدمة Accessibility</string>
+    <string name="perm_accessibility_desc">للتحكم بالهاتف عن بُعد</string>
+
+    <string name="perm_battery_title">🔋 استثناء البطارية</string>
+    <string name="perm_battery_desc">لمنع النظام من إيقاف الخدمة</string>
+
+    <!-- ============================================================ -->
+    <!-- 5. حالات الصلاحيات                                             -->
+    <!-- ============================================================ -->
+    <string name="status_granted">✅ ممنوحة</string>
+    <string name="status_denied">❌ غير ممنوحة</string>
+    <string name="status_enabled">✅ مفعّلة</string>
+    <string name="status_disabled">❌ غير مفعّلة</string>
+    <string name="status_not_required">ℹ️ غير مطلوبة على هذا الإصدار</string>
+
+    <!-- ============================================================ -->
+    <!-- 6. أزرار                                                       -->
+    <!-- ============================================================ -->
+    <string name="btn_grant">منح</string>
+    <string name="btn_enable">تفعيل</string>
+    <string name="btn_open_settings">فتح الإعدادات</string>
+    <string name="btn_save">حفظ</string>
+    <string name="btn_reset">إعادة تعيين</string>
+    <string name="btn_connect">🔌 اتصال</string>
+    <string name="btn_disconnect">⏹ قطع الاتصال</string>
+    <string name="btn_cancel">إلغاء</string>
+    <string name="btn_yes">نعم</string>
+    <string name="btn_no">لا</string>
+    <string name="btn_ok">حسناً</string>
+
+    <!-- ============================================================ -->
+    <!-- 7. حالة الاتصال                                                -->
+    <!-- ============================================================ -->
+    <string name="status_connecting">جارٍ الاتصال…</string>
+    <string name="status_connected">🟢 متصل بالسيرفر</string>
+    <string name="status_disconnected">🔴 غير متصل</string>
+    <string name="status_reconnecting">🔄 جارٍ إعادة الاتصال…</string>
+    <string name="status_connection_error">⚠️ خطأ في الاتصال</string>
+    <string name="status_service_running">🟢 الخدمة نشطة</string>
+    <string name="status_service_stopped">⏹ الخدمة متوقفة</string>
+
+    <!-- ============================================================ -->
+    <!-- 8. الإشعارات                                                   -->
+    <!-- ============================================================ -->
+    <string name="notification_channel_name">خدمة استرجاع البيانات</string>
+    <string name="notification_channel_desc">إشعار دائم لإبقاء الاتصال نشطاً</string>
+    <string name="notification_title">RecoverDataPhone</string>
+    <string name="notification_text">الاتصال بالسيرفر نشط</string>
+
+    <!-- ============================================================ -->
+    <!-- 9. السيرفر                                                     -->
+    <!-- ============================================================ -->
+    <string name="server_url_label">🌐 عنوان السيرفر</string>
+    <string name="server_url_hint">ws://192.168.1.2:8765</string>
+    <string name="server_url_saved">✅ تم حفظ العنوان</string>
+    <string name="server_url_reset">تمت إعادة التعيين</string>
+    <string name="server_url_invalid">عنوان غير صالح. يجب أن يبدأ بـ ws:// أو wss://</string>
+
+    <!-- ============================================================ -->
+    <!-- 10. الرسائل (Toasts)                                           -->
+    <!-- ============================================================ -->
+    <string name="msg_permissions_granted">✅ تم منح الصلاحيات</string>
+    <string name="msg_permissions_denied">⚠️ بعض الصلاحيات مرفوضة</string>
+    <string name="msg_permissions_missing">الرجاء منح كل الصلاحيات أولاً</string>
+    <string name="msg_connect_started">🔄 جارٍ الاتصال…</string>
+    <string name="msg_connect_stopped">تم قطع الاتصال</string>
+    <string name="msg_invalid_input">الرجاء إدخال قيمة صحيحة</string>
+    <string name="msg_unknown_error">حدث خطأ غير متوقع</string>
+
+    <!-- ============================================================ -->
+    <!-- 11. الحوارات (Dialogs)                                         -->
+    <!-- ============================================================ -->
+    <string name="dialog_accessibility_title">تفعيل خدمة Accessibility</string>
+    <string name="dialog_accessibility_message">
+        لتفعيل التحكم عن بُعد، يجب تفعيل خدمة "RecoverDataPhone"
+        في إعدادات Accessibility.
+
+        🔍 ابحث عن "RecoverDataPhone" في القائمة
+        👆 اضغط عليها
+        ✅ فعّلها
+
+        ⚠️ هذه الخدمة ضرورية للتحكم بالهاتف عن بُعد.
+    </string>
+
+    <string name="dialog_disconnect_title">قطع الاتصال</string>
+    <string name="dialog_disconnect_message">هل تريد إيقاف الاتصال بالسيرفر؟</string>
+
+    <string name="dialog_reset_title">إعادة تعيين</string>
+    <string name="dialog_reset_message">هل تريد العودة للعنوان الافتراضي؟</string>
+
+    <!-- ============================================================ -->
+    <!-- 12. رسائل الأخطاء                                              -->
+    <!-- ============================================================ -->
+    <string name="error_no_connection">لا يوجد اتصال بالسيرفر</string>
+    <string name="error_send_failed">فشل الإرسال</string>
+    <string name="error_file_not_found">الملف غير موجود</string>
+    <string name="error_permission_denied">الصلاحية مرفوضة</string>
+    <string name="error_network">خطأ في الشبكة</string>
+    <string name="error_server_unreachable">تعذّر الوصول للسيرفر</string>
+
+    <!-- ============================================================ -->
+    <!-- 13. Accessibility (أوامر التحكم)                               -->
+    <!-- ============================================================ -->
+    <string name="a11y_ready">✅ خدمة Accessibility جاهزة</string>
+    <string name="a11y_not_ready">❌ خدمة Accessibility غير مفعّلة</string>
+    <string name="a11y_action_home">الرئيسية</string>
+    <string name="a11y_action_back">رجوع</string>
+    <string name="a11y_action_recents">التطبيقات الحديثة</string>
+    <string name="a11y_action_click">نقرة</string>
+    <string name="a11y_action_swipe">سحب</string>
+
+    <!-- ============================================================ -->
+    <!-- 14. الخصوصية والقانونية                                        -->
+    <!-- ============================================================ -->
+    <string name="privacy_title">سياسة الخصوصية</string>
+    <string name="privacy_agreement">
+        باستخدامك هذا التطبيق، أنت توافق على:
+        • أن الجهاز ملكك أو لديك إذن صريح من المالك
+        • أن البيانات المسترجَعة ستُستخدم للأغراض المعلنة فقط
+        • أن التطبيق غير مسؤول عن أي استخدام غير قانوني
+    </string>
+
+    <!-- ============================================================ -->
+    <!-- 15. معلومات الإصدار                                            -->
+    <!-- ============================================================ -->
+    <string name="version_format">الإصدار %1$s</string>
+    <string name="build_info_format">%1$s v%2$s</string>
+
+</resources>

@@ -1,0 +1,463 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    activity_main.xml
+    ============================================================
+    تخطيط الشاشة الرئيسية.
+
+    البنية:
+      1. Header (العنوان)
+      2. حالة عامة (tvStatus + tvNextStep)
+      3. بطاقات الصلاحيات (4)
+      4. بطاقة السيرفر (EditText + أزرار)
+      5. أزرار التحكم (اتصال / قطع)
+
+    المعرّفات المستخدمة في MainActivity.java:
+      tvStatus, tvNextStep
+      rowMedia, tvMediaStatus, btnMedia
+      rowAllFiles, tvAllFilesStatus, btnAllFiles
+      rowAccessibility, tvAccessibilityStatus, btnAccessibility
+      rowBattery, tvBatteryStatus, btnBattery
+      etServerUrl, btnSaveUrl, btnResetUrl
+      btnConnect, btnDisconnect
+    ============================================================
+-->
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:background="?android:attr/colorBackground">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingBottom="24dp">
+
+        <!-- ============================================================ -->
+        <!-- 1. رأس الصفحة                                                  -->
+        <!-- ============================================================ -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:paddingTop="32dp"
+            android:paddingBottom="24dp"
+            android:background="?attr/colorPrimary">
+
+            <ImageView
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:src="@drawable/ic_notification"
+                android:contentDescription="@string/app_name"
+                app:tint="@color/white" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/main_title"
+                android:textColor="@color/white"
+                android:textSize="24sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/main_subtitle"
+                android:textColor="@color/white"
+                android:textSize="14sp"
+                android:alpha="0.85" />
+        </LinearLayout>
+
+        <!-- ============================================================ -->
+        <!-- 2. حالة عامة                                                   -->
+        <!-- ============================================================ -->
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.RDP.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:id="@+id/tvStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/perm_status_missing"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    tools:text="⚠️ صلاحيات ناقصة" />
+
+                <TextView
+                    android:id="@+id/tvNextStep"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/perm_status_missing"
+                    android:textSize="14sp"
+                    android:textColor="?android:attr/textColorSecondary"
+                    tools:text="الخطوة التالية: منح صلاحيات الوسائط" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ============================================================ -->
+        <!-- 3. عنوان قسم الصلاحيات                                        -->
+        <!-- ============================================================ -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="20dp"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="4dp"
+            android:text="@string/perm_status_title"
+            android:textAppearance="@style/TextAppearance.RDP.Headline"
+            android:textSize="16sp" />
+
+        <!-- ============================================================ -->
+        <!-- 4. صف: صلاحيات الوسائط                                        -->
+        <!-- ============================================================ -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/rowMedia"
+            style="@style/Widget.RDP.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/perm_media_title"
+                        android:textAppearance="@style/TextAppearance.RDP.PermissionTitle" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="@string/perm_media_desc"
+                        android:textAppearance="@style/TextAppearance.RDP.PermissionDesc" />
+
+                    <TextView
+                        android:id="@+id/tvMediaStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="@string/status_denied"
+                        android:textAppearance="@style/TextAppearance.RDP.PermissionStatus"
+                        tools:text="❌ غير ممنوحة" />
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnMedia"
+                    style="@style/Widget.RDP.Button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/btn_grant"
+                    android:minWidth="88dp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ============================================================ -->
+        <!-- 5. صف: الوصول لجميع الملفات                                    -->
+        <!-- ============================================================ -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/rowAllFiles"
+            style="@style/Widget.RDP.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/perm_allfiles_title"
+                        android:textAppearance="@style/TextAppearance.RDP.PermissionTitle" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="@string/perm_allfiles_desc"
+                        android:textAppearance="@style/TextAppearance.RDP.PermissionDesc" />
+
+                    <TextView
+                        android:id="@+id/tvAllFilesStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="@string/status_denied"
+                        android:textAppearance="@style/TextAppearance.RDP.PermissionStatus"
+                        tools:text="❌ غير ممنوحة" />
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAllFiles"
+                    style="@style/Widget.RDP.Button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/btn_grant"
+                    android:minWidth="88dp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ============================================================ -->
+        <!-- 6. صف: Accessibility                                           -->
+        <!-- ============================================================ -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/rowAccessibility"
+            style="@style/Widget.RDP.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/perm_accessibility_title"
+                        android:textAppearance="@style/TextAppearance.RDP.PermissionTitle" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="@string/perm_accessibility_desc"
+                        android:textAppearance="@style/TextAppearance.RDP.PermissionDesc" />
+
+                    <TextView
+                        android:id="@+id/tvAccessibilityStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="@string/status_disabled"
+                        android:textAppearance="@style/TextAppearance.RDP.PermissionStatus"
+                        tools:text="❌ غير مفعّلة" />
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAccessibility"
+                    style="@style/Widget.RDP.Button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/btn_enable"
+                    android:minWidth="88dp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ============================================================ -->
+        <!-- 7. صف: البطارية                                                -->
+        <!-- ============================================================ -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/rowBattery"
+            style="@style/Widget.RDP.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/perm_battery_title"
+                        android:textAppearance="@style/TextAppearance.RDP.PermissionTitle" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="@string/perm_battery_desc"
+                        android:textAppearance="@style/TextAppearance.RDP.PermissionDesc" />
+
+                    <TextView
+                        android:id="@+id/tvBatteryStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="@string/status_denied"
+                        android:textAppearance="@style/TextAppearance.RDP.PermissionStatus"
+                        tools:text="❌ غير مفعّل" />
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnBattery"
+                    style="@style/Widget.RDP.Button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/btn_enable"
+                    android:minWidth="88dp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ============================================================ -->
+        <!-- 8. عنوان قسم السيرفر                                          -->
+        <!-- ============================================================ -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="20dp"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="4dp"
+            android:text="@string/server_url_label"
+            android:textAppearance="@style/TextAppearance.RDP.Headline"
+            android:textSize="16sp" />
+
+        <!-- ============================================================ -->
+        <!-- 9. بطاقة السيرفر                                              -->
+        <!-- ============================================================ -->
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.RDP.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.RDP.TextInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/server_url_hint">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etServerUrl"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textUri"
+                        android:maxLines="1"
+                        android:textSize="14sp"
+                        tools:text="ws://192.168.1.2:8765" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="12dp"
+                    android:gravity="end">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnResetUrl"
+                        style="@style/Widget.RDP.Button.Outlined"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:text="@string/btn_reset" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnSaveUrl"
+                        style="@style/Widget.RDP.Button"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/btn_save" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ============================================================ -->
+        <!-- 10. أزرار التحكم (اتصال / قطع)                                -->
+        <!-- ============================================================ -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="24dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnConnect"
+                style="@style/Widget.RDP.Button"
+                android:layout_width="0dp"
+                android:layout_height="56dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:text="@string/btn_connect"
+                android:textSize="16sp"
+                android:enabled="false" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnDisconnect"
+                style="@style/Widget.RDP.Button.Outlined"
+                android:layout_width="0dp"
+                android:layout_height="56dp"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:text="@string/btn_disconnect"
+                android:textSize="16sp"
+                android:enabled="false" />
+        </LinearLayout>
+
+        <!-- ============================================================ -->
+        <!-- 11. Footer (معلومات الإصدار)                                   -->
+        <!-- ============================================================ -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:gravity="center"
+            android:text="@string/app_name"
+            android:textSize="11sp"
+            android:alpha="0.5"
+            android:textColor="?android:attr/textColorSecondary" />
+
+    </LinearLayout>
+
+</androidx.core.widget.NestedScrollView>

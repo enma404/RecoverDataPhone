@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    colors.xml
+    ============================================================
+    كل ألوان التطبيق في مكان واحد.
+    ============================================================
+-->
+<resources>
+
+    <!-- ===== الألوان الأساسية (Brand) ===== -->
+    <color name="brand_primary">#1976D2</color>          <!-- أزرق -->
+    <color name="brand_primary_dark">#0D47A1</color>     <!-- أزرق داكن -->
+    <color name="brand_secondary">#FF6F00</color>        <!-- برتقالي -->
+    <color name="brand_secondary_dark">#E65100</color>   <!-- برتقالي داكن -->
+
+    <!-- ===== الألوان العامة ===== -->
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="transparent">#00000000</color>
+
+    <!-- ===== ألوان الحالة ===== -->
+    <color name="status_success">#4CAF50</color>         <!-- أخضر -->
+    <color name="status_warning">#FF9800</color>         <!-- برتقالي -->
+    <color name="status_error">#F44336</color>           <!-- أحمر -->
+    <color name="status_info">#2196F3</color>            <!-- أزرق فاتح -->
+
+    <!-- ===== خلفيات وأسطح ===== -->
+    <color name="bg_light">#FAFAFA</color>
+    <color name="bg_dark">#121212</color>
+    <color name="surface_light">#FFFFFF</color>
+    <color name="surface_dark">#1E1E1E</color>
+
+    <!-- ===== نص ===== -->
+    <color name="text_primary_light">#212121</color>
+    <color name="text_secondary_light">#757575</color>
+    <color name="text_primary_dark">#FFFFFF</color>
+    <color name="text_secondary_dark">#B0B0B0</color>
+
+    <!-- ===== فواصل ===== -->
+    <color name="divider_light">#E0E0E0</color>
+    <color name="divider_dark">#2C2C2C</color>
+
+    <!-- ===== ألوان مخصصة للحالات ===== -->
+    <color name="perm_granted">#4CAF50</color>           <!-- أخضر -->
+    <color name="perm_denied">#F44336</color>            <!-- أحمر -->
+    <color name="perm_required">#FF9800</color>          <!-- برتقالي -->
+
+    <!-- ===== إشعار ===== -->
+    <color name="notification_color">#1976D2</color>
+
+</resources>
