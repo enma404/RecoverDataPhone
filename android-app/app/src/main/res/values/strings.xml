@@ -105,7 +105,7 @@
     <!-- 9. السيرفر                                                     -->
     <!-- ============================================================ -->
     <string name="server_url_label">🌐 عنوان السيرفر</string>
-    <string name="server_url_hint">ws://192.168.1.2:8765</string>
+    <string name="server_url_hint">ws://192.1**.0.0:8765</string>
     <string name="server_url_saved">✅ تم حفظ العنوان</string>
     <string name="server_url_reset">تمت إعادة التعيين</string>
     <string name="server_url_invalid">عنوان غير صالح. يجب أن يبدأ بـ ws:// أو wss://</string>
