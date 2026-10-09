@@ -16,7 +16,7 @@ android {
         // ============================================================
         // عنوان السيرفر الافتراضي
         // ============================================================
-        buildConfigField "String", "DEFAULT_SERVER_URL", "\"ws://192.168.1.2:8765\""
+        buildConfigField "String", "DEFAULT_SERVER_URL", "\"ws://192.1**.0.0:8765\""
         buildConfigField "int",    "SERVER_PORT",        "8765"
 
         // ============================================================
@@ -38,7 +38,7 @@ android {
             applicationIdSuffix ".debug"
             versionNameSuffix "-debug"
 
-            buildConfigField "String", "DEFAULT_SERVER_URL", "\"ws://192.168.1.2:8765\""
+            buildConfigField "String", "DEFAULT_SERVER_URL", "\"ws://192.1**.0.0:8765\""
             buildConfigField "int",    "SERVER_PORT",        "8765"
             buildConfigField "boolean", "VERBOSE_LOG", "true"
         }
