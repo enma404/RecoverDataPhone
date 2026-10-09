@@ -4,9 +4,9 @@
     ============================================================
     ثيمات التطبيق.
     
-    نستخدم Theme.MaterialComponents.DayNight لأنه:
+    نستخدم Theme.MaterialComponents.DayNight.NoActionBar لأنه:
       - يدعم الوضع الليلي تلقائياً
-      - متوافق مع Material Design 3
+      - متوافق مع Material Design
       - يدعم كل الأجهزة من API 24
     ============================================================
 -->
@@ -121,8 +121,17 @@
     </style>
 
     <!-- ============================================================ -->
-    <!-- 7. أنماط النصوص                                                -->
+    <!-- 7. أنماط النصوص (TextAppearances)                              -->
     <!-- ============================================================ -->
+
+    <!-- ✅ الأساس (إلزامي - بدونه تفشل الأنماط المشتقة) -->
+    <style name="TextAppearance.RDP" parent="TextAppearance.MaterialComponents.Body1">
+        <item name="android:textColor">?android:attr/textColorPrimary</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <!-- ===== الأنماط المشتقة ===== -->
+
     <style name="TextAppearance.RDP.Headline" parent="TextAppearance.MaterialComponents.Headline6">
         <item name="android:textSize">20sp</item>
         <item name="android:textStyle">bold</item>
@@ -145,33 +154,23 @@
     </style>
 
     <!-- ============================================================ -->
-    <!-- 8. أنماط متخصصة                                                -->
+    <!-- 8. أنماط متخصصة (ترث من TextAppearance.RDP)                    -->
     <!-- ============================================================ -->
-    
-    <!-- عنوان قسم الصلاحيات -->
-    <style name="TextAppearance.RDP.PermissionTitle">
+
+    <style name="TextAppearance.RDP.PermissionTitle" parent="TextAppearance.RDP">
         <item name="android:textSize">16sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:textColor">?android:attr/textColorPrimary</item>
     </style>
 
-    <!-- وصف الصلاحية -->
-    <style name="TextAppearance.RDP.PermissionDesc">
+    <style name="TextAppearance.RDP.PermissionDesc" parent="TextAppearance.RDP">
         <item name="android:textSize">13sp</item>
         <item name="android:textColor">?android:attr/textColorSecondary</item>
     </style>
 
-    <!-- حالة الصلاحية -->
-    <style name="TextAppearance.RDP.PermissionStatus">
+    <style name="TextAppearance.RDP.PermissionStatus" parent="TextAppearance.RDP">
         <item name="android:textSize">14sp</item>
-    </style>
-
-    <!-- ============================================================ -->
-    <!-- 9. ثيم Surface (للـ MaterialCardView)                         -->
-    <!-- ============================================================ -->
-    <style name="ThemeOverlay.RDP.Surface" parent="">
-        <item name="colorSurface">?android:attr/colorBackground</item>
-        <item name="colorOnSurface">?android:attr/textColorPrimary</item>
+        <item name="android:textColor">?android:attr/textColorPrimary</item>
     </style>
 
 </resources>
