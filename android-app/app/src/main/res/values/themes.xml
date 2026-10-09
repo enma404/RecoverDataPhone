@@ -36,10 +36,6 @@
         <!-- ===== الخلفية ===== -->
         <item name="android:windowBackground">?android:attr/colorBackground</item>
 
-        <!-- ===== النصوص ===== -->
-        <item name="android:textColorPrimary">?android:attr/textColorPrimary</item>
-        <item name="android:textColorSecondary">?android:attr/textColorSecondary</item>
-
         <!-- ===== الأزرار ===== -->
         <item name="materialButtonStyle">@style/Widget.RDP.Button</item>
 
