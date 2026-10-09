@@ -1,0 +1,47 @@
+// =====================================================================
+// Project-level build.gradle
+// الموقع: android-app/build.gradle
+// الدور: إعداد الإضافات العامة + مستودعات التبعيات
+// =====================================================================
+
+// ملاحظة: في AGP 8+ الطريقة الحديثة هي استخدام plugins block
+plugins {
+    id 'com.android.application' version '8.2.2' apply false
+    id 'com.android.library' version '8.2.2' apply false
+}
+
+// =====================================================================
+// إعدادات عامة لكل الوحدات الفرعية (subprojects)
+// =====================================================================
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+        // مستودع Gradle للنسخ التجريبية (إن احتجنا)
+        // maven { url 'https://jitpack.io' }
+    }
+}
+
+// =====================================================================
+// تنظيف المشروع (مهم عند الترقية أو التغييرات الكبيرة)
+// =====================================================================
+tasks.register('clean', Delete) {
+    delete rootProject.buildDir
+}
+
+// =====================================================================
+// إعدادات عامة إضافية (اختيارية)
+// =====================================================================
+// لتوحيد إصدارات Java في كل الوحدات
+subprojects {
+    afterEvaluate { project ->
+        if (project.hasProperty('android')) {
+            project.android {
+                compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_17
+                    targetCompatibility JavaVersion.VERSION_17
+                }
+            }
+        }
+    }
+}

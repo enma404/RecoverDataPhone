@@ -1,0 +1,270 @@
+# ============================================================
+# RecoverDataPhone - .gitignore
+# ============================================================
+# يستبعد الملفات التي لا يجب رفعها إلى Git.
+# ============================================================
+
+
+# ============================================================
+# 1. مفاتيح التشفير (حرج! لا ترفع أبداً)
+# ============================================================
+server/storage/keys/
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+*.pfx
+
+
+# ============================================================
+# 2. بيانات العملاء والتراخيص (حرج! خصوصية)
+# ============================================================
+server/storage/received/
+server/storage/temp/
+server/storage/licenses.json
+server/storage/*.tmp
+
+
+# ============================================================
+# 3. السجلات (Logs)
+# ============================================================
+server/logs/
+*.log
+logs/
+log/
+*.log.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+
+# ============================================================
+# 4. الإعدادات المحلية (قد تحتوي أسرار)
+# ============================================================
+.env
+.env.*
+!.env.example
+*.env.local
+config.local.json
+server/config.local.json
+
+
+# ============================================================
+# 5. Python
+# ============================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+venv/
+.venv/
+ENV/
+env/
+ENV.bak/
+.conda/
+.python-version
+
+
+# ============================================================
+# 6. Android / Java / Gradle
+# ============================================================
+# Gradle
+.gradle/
+android-app/.gradle/
+android-app/build/
+android-app/app/build/
+android-app/captures/
+android-app/.cxx/
+gradle-app.setting
+.gradletasknamecache
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+android-app/.idea/
+android-app/local.properties
+android-app/.navigation/
+
+# Build outputs
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+bin/
+gen/
+out/
+release/
+*.hprof
+
+# Native (NDK)
+.externalNativeBuild/
+.cxx/
+*.so
+obj/
+jniLibs/
+
+# Google Services
+google-services.json
+android-app/app/google-services.json
+
+
+# ============================================================
+# 7. النظام والتطبيقات
+# ============================================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+.DocumentRevisions-V100
+.TemporaryItems
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+
+# ============================================================
+# 8. المحررات (Editors)
+# ============================================================
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json.example
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+.factorypath
+
+
+# ============================================================
+# 9. النسخ الاحتياطية والملفات المؤقتة
+# ============================================================
+*.bak
+*.backup
+*.old
+*.orig
+*.tmp
+*.temp
+*.swp
+*.swo
+~$*
+*~
+.#*
+\#*#
+.cache/
+.temp/
+tmp/
+temp/
+
+
+# ============================================================
+# 10. قواعد البيانات المحلية
+# ============================================================
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+
+# ============================================================
+# 11. التقارير والاختبارات
+# ============================================================
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+coverage.xml
+*.cover
+nosetests.xml
+.tox/
+
+
+# ============================================================
+# 12. ملفات المشروع الخاصة
+# ============================================================
+# ملفات الاختبار المحلية
+test_*.local.*
+*.test.local
+scratch/
+playground/
+TODO.local.md
+NOTES.local.md
+
+# الناتج النهائي لـ APK/AAB
+android-app/app/release/
+android-app/app/debug/
+*.apk
+*.aab
+
+# مجلد التخزين المؤقت للسيرفر
+server/storage/.cache/
+
+
+# ============================================================
+# 13. Termux وبيئات خاصة
+# ============================================================
+.termux/
+termux-*.properties
+
+
+# ============================================================
+# 14. تعليمات خاصة
+# ============================================================
+# ⚠️  استثناءات مهمة (ملفات يجب أن تُرفع):
+!.gitignore
+!README.md
+!requirements.txt
+!docs/
+!docs/**
+!*.example
+!.env.example
+!contract_template.pdf

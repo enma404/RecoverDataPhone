@@ -1,0 +1,102 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.recoverdata.phone'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.recoverdata.phone"
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName "1.0.0"
+
+        // ============================================================
+        // عنوان السيرفر الافتراضي (يُستخدم عند أول تشغيل فقط)
+        // بعد أول اتصال ناجح، يُحفظ في SharedPreferences
+        // ============================================================
+        buildConfigField "String", "DEFAULT_SERVER_URL", "\"ws://192.168.1.2:8765\""
+        buildConfigField "int",    "SERVER_PORT",        "8765"
+
+        // ============================================================
+        // معلومات المشروع (تظهر في السيرفر عند الاتصال)
+        // ============================================================
+        buildConfigField "String", "CLIENT_VERSION", "\"1.0.0\""
+        buildConfigField "String", "CLIENT_NAME",    "\"RecoverDataPhone\""
+    }
+
+    buildTypes {
+        debug {
+            minifyEnabled false
+            debuggable true
+
+            // ============================================================
+            // عنوان السيرفر للتجربة (Local Network)
+            // ============================================================
+            buildConfigField "String", "DEFAULT_SERVER_URL", "\"ws://192.168.1.2:8765\""
+            buildConfigField "int",    "SERVER_PORT",        "8765"
+
+            // تفعيل اللوج المفصل للتطوير
+            buildConfigField "boolean", "VERBOSE_LOG", "true"
+        }
+
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),
+                          'proguard-rules.pro'
+
+            // ============================================================
+            // ⚠️ غيّر هذا إلى عنوان الإنتاج قبل النشر التجاري
+            // ============================================================
+            buildConfigField "String", "DEFAULT_SERVER_URL", "\"wss://api.recoverdata.com:8765\""
+            buildConfigField "int",    "SERVER_PORT",        "8765"
+
+            // إيقاف اللوج المفصل في الإنتاج
+            buildConfigField "boolean", "VERBOSE_LOG", "false"
+
+            // ملاحظة: التوقيع (Signing) يُضاف لاحقاً عند النشر
+            // signingConfigs { ... }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        buildConfig true   // ← مهم لتفعيل BuildConfig fields
+        viewBinding true   // ← مفيد لـ MainActivity لاحقاً
+    }
+
+    packaging {
+        resources {
+            excludes += ['/META-INF/{AL2.0,LGPL2.1}']
+        }
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+}
+
+dependencies {
+    // ===== Android الأساسية =====
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.core:core:1.12.0'
+    implementation 'com.google.android.material:material:1.11.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+
+    // ===== WebSocket (OkHttp) =====
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+
+    // ===== JSON =====
+    implementation 'com.google.code.gson:gson:2.10.1'
+
+    // ===== دعم Lifecycle للخدمات =====
+    implementation 'androidx.lifecycle:lifecycle-service:2.7.0'
+}
