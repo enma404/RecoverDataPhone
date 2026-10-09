@@ -205,6 +205,56 @@ Accessibility Service
 
 استثناء البطارية
 
+<!-- ============================================================ --><!-- Project Structure --><!-- ============================================================ -->
+📁 هيكل المشروع
+text
+RecoverDataPhone/
+│
+├── 📱 android-app/                    # تطبيق الأندرويد
+│   ├── app/
+│   │   ├── src/main/
+│   │   │   ├── java/com/recoverdata/phone/
+│   │   │   │   ├── MainActivity.java
+│   │   │   │   ├── RecoverDataApp.java
+│   │   │   │   ├── service/           # ConnectionService, BootReceiver
+│   │   │   │   ├── network/           # WebSocket, CommandHandler, Protocol
+│   │   │   │   ├── data/              # Collectors, DataSender
+│   │   │   │   ├── accessibility/     # AutoPilotService
+│   │   │   │   └── utils/             # Logger, PermissionHelper
+│   │   │   ├── res/
+│   │   │   │   ├── layout/            # activity_main.xml
+│   │   │   │   ├── values/            # strings, colors, themes
+│   │   │   │   ├── xml/               # configs
+│   │   │   │   └── drawable/          # icons
+│   │   │   └── AndroidManifest.xml
+│   │   └── build.gradle
+│   └── build.gradle
+│
+├── 🐍 server/                         # سيرفر Python
+│   ├── main.py                        # نقطة الدخول
+│   ├── requirements.txt
+│   ├── core/                          # websocket, session, auth, crypto
+│   ├── commands/                      # parser, photos, videos, files
+│   ├── cli/                           # terminal
+│   └── utils/                         # logger
+│
+├── 📄 docs/                           # التوثيق
+│   ├── api_protocol.md                # بروتوكول الاتصال
+│   ├── privacy_policy.md              # سياسة الخصوصية
+│   ├── contract_template.md           # عقد العميل
+│   └── assets/                        # الصور
+│       ├── logo.png
+│       ├── screenshot-1.png
+│       ├── screenshot-2.png
+│       └── screenshot-3.png
+│
+├── .github/workflows/                 # CI/CD
+│   └── build-apk.yml
+│
+├── .gitignore
+└── README.md
+<!-- ============================================================ --><!-- API Documentation --><!-- ============================================================ -->
+
 أدخل عنوان السيرفر: ws://192.1**.0.0:8765
 
 اضغط "اتصال".
