@@ -13,7 +13,7 @@
     <!-- ============================================================ -->
     <!-- 1. معلومات التطبيق                                             -->
     <!-- ============================================================ -->
-    <string name="app_name">RecoverDataPhone</string>
+    <string name="app_name">RecoverD-PHONE</string>
     <string name="app_short_name">RDP</string>
     <string name="app_description">استرجاع البيانات من هاتف بشاشة مكسورة</string>
 
