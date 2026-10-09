@@ -3,74 +3,21 @@
     accessibility_service_config.xml
     ============================================================
     إعدادات خدمة Accessibility لتطبيق RecoverDataPhone.
-
-    يشير إليه AndroidManifest.xml عبر:
-        android:resource="@xml/accessibility_service_config"
-
-    الوظائف:
-      - تحديد أنواع الأحداث التي نستقبلها.
-      - تحديد الإجراءات التي يمكن للخدمة تنفيذها.
-      - تفعيل قراءة شجرة الواجهة.
-      - تفعيل اللمس والإيماءات.
     ============================================================
 -->
 <accessibility-service
     xmlns:android="http://schemas.android.com/apk/res/android"
-
-    <!-- ======================================================== -->
-    <!-- 1. أنواع الأحداث المُستقبَلة                               -->
-    <!-- ======================================================== -->
     android:accessibilityEventTypes="typeAllMask"
-
-    <!-- ======================================================== -->
-    <!-- 2. نوع التغذية الراجعة                                    -->
-    <!-- ======================================================== -->
     android:accessibilityFeedbackType="feedbackGeneric"
-
-    <!-- ======================================================== -->
-    <!-- 3. الأعلام (Flags) - الأهم!                                -->
-    <!-- ======================================================== -->
-    android:accessibilityFlags="
-        flagDefault|
-        flagIncludeNotImportantViews|
-        flagReportViewIds|
-        flagRetrieveInteractiveWindows|
-        flagRequestEnhancedWebAccessibility|
-        flagRequestFilterKeyEvents|
-        flagRequestTouchExplorationMode"
-
-    <!-- ======================================================== -->
-    <!-- 4. مهلة الإشعارات (ms)                                    -->
-    <!-- ======================================================== -->
+    android:accessibilityFlags="flagDefault|flagIncludeNotImportantViews|flagReportViewIds|flagRetrieveInteractiveWindows|flagRequestEnhancedWebAccessibility|flagRequestFilterKeyEvents|flagRequestTouchExplorationMode"
     android:notificationTimeout="100"
-
-    <!-- ======================================================== -->
-    <!-- 5. القدرات الأساسية                                        -->
-    <!-- ======================================================== -->
     android:canRetrieveWindowContent="true"
     android:canPerformGestures="true"
     android:canRequestEnhancedWebAccessibility="true"
     android:canRequestFilterKeyEvents="true"
     android:canRequestTouchExplorationMode="true"
     android:canTakeScreenshot="true"
-
-    <!-- ======================================================== -->
-    <!-- 6. تحديد الحزم (فارغ = كل التطبيقات)                       -->
-    <!-- ======================================================== -->
     android:packageNames=""
-
-    <!-- ======================================================== -->
-    <!-- 7. الوصف الظاهر للمستخدم                                   -->
-    <!-- ======================================================== -->
     android:description="@string/accessibility_service_description"
-
-    <!-- ======================================================== -->
-    <!-- 8. ملخص قصير (يظهر في شاشة الإعدادات)                     -->
-    <!-- ======================================================== -->
     android:summary="@string/accessibility_service_summary"
-
-    <!-- ======================================================== -->
-    <!-- 9. إعدادات إضافية                                         -->
-    <!-- ======================================================== -->
-    android:settingsActivity="com.recoverdata.phone.MainActivity"
-/>
+    android:settingsActivity="com.recoverdata.phone.MainActivity" />
